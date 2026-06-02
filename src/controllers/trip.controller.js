@@ -1,4 +1,15 @@
-const { Driver, User, Vehicle, Trip } = require('../models');
+const {
+  Trip,
+  Driver,
+  Vehicle,
+  Company,
+  TransportCompany,
+  Affiliate,
+  TransportAssistant,
+  ShippingLine,
+  Patio,
+  User
+} = require('../models');
 
 exports.createTrip = async (req, res) => {
   try {
@@ -6,7 +17,7 @@ exports.createTrip = async (req, res) => {
 
     const newTrip = await Trip.create({
       ...req.body,
-      creator_user_id: userId,
+      user_id: userId,
       company_id, // Asegura que la compañía del usuario quede ligada al viaje
     });
 
@@ -25,16 +36,15 @@ exports.getTripById = async (req, res) => {
     const trip = await Trip.findOne({
       where: { id, company_id, active: true },
       include: [
-        {
-          model: Driver,
-          as: 'driver',
-          include: [{ model: User, as: 'user' }],
-        },
-        {
-          model: Vehicle,
-          as: 'vehicle',
-        }
-      ],
+  { model: Driver, as: 'driver' },
+  { model: Vehicle, as: 'vehicle' },
+  { model: Company, as: 'company' },
+  { model: TransportCompany, as: 'transportCompany' },
+  { model: Affiliate, as: 'affiliate' },
+  { model: TransportAssistant, as: 'transportAssistant' },
+  { model: ShippingLine, as: 'shippingLine' },
+  { model: Patio, as: 'patio' }
+],
     });
 
     if (!trip) {
@@ -55,16 +65,15 @@ exports.getTripsByCompany = async (req, res) => {
 
     const trips = await Trip.findAll({ where: { company_id, active: true }, 
       include: [
-    {
-      model: Driver,
-      as: 'driver',
-      include: [{ model: User, as: 'user' }],
-    },
-    {
-      model: Vehicle,
-      as: 'vehicle',
-    }
-  ],
+  { model: Driver, as: 'driver' },
+  { model: Vehicle, as: 'vehicle' },
+  { model: Company, as: 'company' },
+  { model: TransportCompany, as: 'transportCompany' },
+  { model: Affiliate, as: 'affiliate' },
+  { model: TransportAssistant, as: 'transportAssistant' },
+  { model: ShippingLine, as: 'shippingLine' },
+  { model: Patio, as: 'patio' }
+],
       order: [['created_at', 'DESC']] });
 
     res.json(trips);
