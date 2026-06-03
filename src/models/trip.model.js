@@ -133,6 +133,11 @@ Trip.associate = (models) => {
     as: 'company'
   });
 
+  Trip.belongsTo(models.Container, {
+    foreignKey: 'container_number_id',
+    as: 'container'
+  });
+
   Trip.belongsTo(models.Client, {
     foreignKey: 'client_id',
     as: 'client'
