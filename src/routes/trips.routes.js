@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const controller = require('../controllers/trip.controller');
+const controller = require('../controllers/trips.controller');
 const auth = require('../middlewares/auth.middleware'); // JWT auth
 
 router.post('/', auth, controller.createTrip);

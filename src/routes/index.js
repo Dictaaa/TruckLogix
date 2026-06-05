@@ -9,12 +9,20 @@ const registrationRoutes = require('./registration.routes');
 const inspectionItemRoutes = require('./inspection_items.routes');
 const vehicleInspectionItemsRoutes = require('./vehicle_inspection_items.routes');
 const vehicleDriverAssignment = require('./vehicleDriverAssignment.routes');
-const tripRoutes = require('./trip.routes');
+const tripsRoutes = require('./trips.routes');
 const driversRoutes = require('./drivers.routes');
 const vehicleDriverAssignmentRoutes = require('./vehicleDriverAssignment.routes');
+const patiosRoutes = require('./patios.routes');
+const shippingLinesRoutes = require('./shippingLines.routes');
+const transportAssistantsRoutes = require('./transportAssistants.routes');
+const transportCompanysRoutes = require('./transportCompanys.routes');
+const clientsRoutes = require('./clients.routes');
+const affiliatesRoutes = require('./affiliates.routes');
+const containersRoutes = require('./containers.routes');
+const freightsRoutes = require('./freights.routes');
+const operationsRoutes = require('./operations.routes');
 
 const router = Router();
-vehicleDriverAssignment.routes
 router.use('/auth', authRoutes);
 router.use('/vehicles', vehicleRoutes);
 router.use('/users', usersRoutes);
@@ -25,9 +33,17 @@ router.use('/registration', registrationRoutes);
 router.use('/inspection-items', inspectionItemRoutes);
 router.use('/vehicle-inspection-items', vehicleInspectionItemsRoutes);
 router.use('/vehicle-driver-assignment', vehicleDriverAssignment);
-router.use('/trip', tripRoutes);
+router.use('/trips', tripsRoutes);
 router.use('/drivers', driversRoutes);
 router.use('/driver-vehicles', vehicleDriverAssignmentRoutes);
-
+router.use('/patios', patiosRoutes);
+router.use('/shipping-lines', shippingLinesRoutes);
+router.use('/transport-assistants', transportAssistantsRoutes);
+router.use('/transport-companies', transportCompanysRoutes);
+router.use('/clients', clientsRoutes);
+router.use('/affiliates', affiliatesRoutes);
+router.use('/containers', containersRoutes);
+router.use('/freights', freightsRoutes);
+router.use('/operations', operationsRoutes);
 
 module.exports = router;

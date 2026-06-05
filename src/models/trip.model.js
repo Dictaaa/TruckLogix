@@ -64,8 +64,8 @@ Trip.init({
     allowNull: true,
   },
 
-  operation_type: {
-    type: DataTypes.STRING(50),
+  operation_id: {
+    type: DataTypes.INTEGER,
     allowNull: true,
   },
 
@@ -176,6 +176,11 @@ Trip.associate = (models) => {
   Trip.belongsTo(models.Patio, {
     foreignKey: 'patio_id',
     as: 'patio'
+  });
+
+  Trip.belongsTo(models.Operation, {
+    foreignKey: 'operation_id',
+    as: 'operation'
   });
 
 };

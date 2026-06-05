@@ -1,0 +1,55 @@
+const { DataTypes, Model } = require('sequelize');
+const { sequelize } = require('../config/db');
+
+class Freight extends Model {}
+
+Freight.init({
+  id: {
+    type: DataTypes.INTEGER,
+    autoIncrement: true,
+    primaryKey: true,
+  },
+
+  freight: {
+    type: DataTypes.DECIMAL(15, 2),
+    defaultValue: 0,
+  },
+
+  transport_companies_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
+
+  origin_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
+
+  destination_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
+
+  active: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true,
+  },
+
+  user_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
+
+  created_at: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  }
+
+}, {
+  sequelize,
+  modelName: 'Freight',
+  tableName: 'freights',
+  timestamps: false,
+});
+
+module.exports = Freight;

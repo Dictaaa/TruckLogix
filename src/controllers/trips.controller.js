@@ -10,6 +10,7 @@ const {
   TransportAssistant,
   ShippingLine,
   Patio,
+  Operation,
   User
 } = require('../models');
 
@@ -47,7 +48,8 @@ exports.getTripById = async (req, res) => {
   { model: Affiliate, as: 'affiliate' },
   { model: TransportAssistant, as: 'transportAssistant' },
   { model: ShippingLine, as: 'shippingLine' },
-  { model: Patio, as: 'patio' }
+  { model: Patio, as: 'patio' },
+  { model: Operation, as: 'operation' }
 ],
     });
 
@@ -78,7 +80,8 @@ exports.getTripsByCompany = async (req, res) => {
   { model: Affiliate, as: 'affiliate' },
   { model: TransportAssistant, as: 'transportAssistant' },
   { model: ShippingLine, as: 'shippingLine' },
-  { model: Patio, as: 'patio' }
+  { model: Patio, as: 'patio' },
+  { model: Operation, as: 'operation' }
 ],
       order: [['created_at', 'DESC']] });
 
