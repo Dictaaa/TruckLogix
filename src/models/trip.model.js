@@ -45,8 +45,13 @@ Trip.init({
     allowNull: true,
   },
 
-  patio_id: {
-    type: DataTypes.INTEGER.UNSIGNED,
+  origin_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
+
+  destination_id: {
+    type: DataTypes.INTEGER,
     allowNull: true,
   },
 
@@ -174,8 +179,14 @@ Trip.associate = (models) => {
   });
 
   Trip.belongsTo(models.Patio, {
-    foreignKey: 'patio_id',
-    as: 'patio'
+    foreignKey: 'origin_id',
+    as: 'origin'
+  });
+
+  
+  Trip.belongsTo(models.Patio, {
+    foreignKey: 'destination_id',
+    as: 'destination'
   });
 
   Trip.belongsTo(models.Operation, {

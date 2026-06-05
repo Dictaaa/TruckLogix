@@ -23,6 +23,27 @@ exports.create = async (req, res) => {
   }
 };
 
+exports.findOrCreate = async (req, res) => {
+  try {
+    const { number, container_size_id, user_id } = req.body;
+
+    const [container, created] = await Container.findOrCreate({
+      where: { number: number.trim().toUpperCase() },
+      defaults: {
+        number: number.trim().toUpperCase(),
+        container_size_id: container_size_id || null,
+        user_id: user_id || null,
+        active: true
+      }
+    });
+
+    res.status(created ? 201 : 200).json({ container, created });
+  } catch (error) {
+    console.error('Error en findOrCreate container:', error);
+    res.status(500).json({ error: 'Error del servidor' });
+  }
+};
+
 // Obtener un container por ID
 exports.getOne = async (req, res) => {
   try {
