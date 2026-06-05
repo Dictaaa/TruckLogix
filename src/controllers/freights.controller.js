@@ -1,10 +1,14 @@
-const { Freight } = require('../models');
+const { Freight, TransportCompany, Patio, } = require('../models');
 
 
 // Listar todos los freights
 exports.list = async (req, res) => {
   try {
-    const freights = await Freight.findAll();
+    const freights = await Freight.findAll({include: [
+  { model: TransportCompany, as: 'transportCompany' },
+  { model: Patio, as: 'origin' },
+  { model: Patio, as: 'destination' }
+],});
     res.json(freights);
   } catch (error) {
     console.error('Error al listar freights:', error);

@@ -15,7 +15,7 @@ Freight.init({
     defaultValue: 0,
   },
 
-  transport_companies_id: {
+  transport_company_id: {
     type: DataTypes.INTEGER,
     allowNull: true,
   },
@@ -51,5 +51,24 @@ Freight.init({
   tableName: 'freights',
   timestamps: false,
 });
+
+Freight.associate = (models) => {
+
+  Freight.belongsTo(models.TransportCompany, {
+    foreignKey: 'transport_company_id',
+    as: 'transportCompany'
+  });
+
+  Freight.belongsTo(models.Patio, {
+    foreignKey: 'origin_id',
+    as: 'origin'
+  });
+
+  
+  Freight.belongsTo(models.Patio, {
+    foreignKey: 'destination_id',
+    as: 'destination'
+  });
+};
 
 module.exports = Freight;
