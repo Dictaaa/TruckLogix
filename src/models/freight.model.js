@@ -30,6 +30,16 @@ Freight.init({
     allowNull: true,
   },
 
+  container_size_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
+
+  condition_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
+
   active: {
     type: DataTypes.BOOLEAN,
     defaultValue: true,
@@ -68,6 +78,11 @@ Freight.associate = (models) => {
   Freight.belongsTo(models.Patio, {
     foreignKey: 'destination_id',
     as: 'destination'
+  });
+
+  Freight.belongsTo(models.ContainerSize, {
+    foreignKey: 'container_size_id',
+    as: 'containerSize'
   });
 };
 

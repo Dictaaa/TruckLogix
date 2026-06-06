@@ -1,4 +1,4 @@
-const { Freight, TransportCompany, Patio, } = require('../models');
+const { Freight, TransportCompany, Patio } = require('../models');
 
 
 // Listar todos los freights
