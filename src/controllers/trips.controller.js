@@ -134,4 +134,53 @@ exports.deleteTripById = async (req, res) => {
   }
 };
 
+exports.getProductionByAffiliate = async (req, res) => {
+  try {
+    const { company_id } = req.user;
+    const { year = new Date().getFullYear(), affiliate_id } = req.query;
 
+    const where = { company_id, active: true };
+
+    // Si viene affiliate_id, filtra por ese afiliado
+    if (affiliate_id) {
+      where.affiliate_id = affiliate_id;
+    }
+
+    const trips = await Trip.findAll({
+      where,
+      include: [
+        { model: Vehicle,   as: 'vehicle',   attributes: ['plate'] },
+        { model: Affiliate, as: 'affiliate', attributes: ['id', 'name'] },
+      ],
+      attributes: ['id', 'trip_date', 'freight_value', 'affiliate_id', 'vehicle_id'],
+    });
+
+    const filtered = trips.filter(t => {
+      if (!t.trip_date) return false;
+      return new Date(t.trip_date).getFullYear() === Number(year);
+    });
+
+    const result = {};
+
+    filtered.forEach((trip) => {
+      const affiliateName = trip.affiliate?.name ?? 'Sin afiliado';
+      const plate         = trip.vehicle?.plate  ?? 'Sin placa';
+      const month         = new Date(trip.trip_date).getMonth() + 1;
+      const value         = Number(trip.freight_value || 0);
+
+      if (!result[affiliateName]) result[affiliateName] = {};
+      if (!result[affiliateName][plate]) {
+        result[affiliateName][plate] = { months: {}, total: 0 };
+      }
+
+      result[affiliateName][plate].months[month] =
+        (result[affiliateName][plate].months[month] || 0) + value;
+      result[affiliateName][plate].total += value;
+    });
+
+    res.json(result);
+  } catch (error) {
+    console.error('Error producción afiliados:', error);
+    res.status(500).json({ error: 'Error del servidor' });
+  }
+};

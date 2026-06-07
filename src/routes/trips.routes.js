@@ -8,6 +8,6 @@ router.get('/', auth, controller.getTripsByCompany);
 router.get('/:id', auth, controller.getTripById);
 router.put('/:id', auth, controller.updateTripById);
 router.delete('/:id', auth, controller.deleteTripById);
-
+router.get('/production/affiliates', auth, controller.getProductionByAffiliate);
 
 module.exports = router;
