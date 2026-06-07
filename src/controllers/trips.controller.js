@@ -65,27 +65,38 @@ exports.getTripById = async (req, res) => {
   }
 };
 
-
 exports.getTripsByCompany = async (req, res) => {
   try {
-    const { company_id } = req.user; // Viene del token
+    const { company_id, role } = req.user;
 
-    const trips = await Trip.findAll({ where: { company_id, active: true }, 
+    let where = { active: true };
+
+    if (role === 3) {
+      // Afiliado: ve solo sus viajes por affiliate_id
+      where.affiliate_id = company_id;
+    } else {
+      // Admin / Auxiliar: ve todos los viajes de la empresa
+      where.company_id = company_id;
+    }
+
+    const trips = await Trip.findAll({
+      where,
       include: [
-  { model: Driver, as: 'driver' },
-  { model: Vehicle, as: 'vehicle' },
-  { model: Company, as: 'company' },
-  { model: Container, as: 'container' },
-  { model: Client, as: 'client' },
-  { model: TransportCompany, as: 'transportCompany' },
-  { model: Affiliate, as: 'affiliate' },
-  { model: TransportAssistant, as: 'transportAssistant' },
-  { model: ShippingLine, as: 'shippingLine' },
-  { model: Patio, as: 'origin' },
-  { model: Patio, as: 'destination' },
-  { model: Operation, as: 'operation' }
-],
-      order: [['created_at', 'DESC']] });
+        { model: Driver,             as: 'driver' },
+        { model: Vehicle,            as: 'vehicle' },
+        { model: Company,            as: 'company' },
+        { model: Container,          as: 'container' },
+        { model: Client,             as: 'client' },
+        { model: TransportCompany,   as: 'transportCompany' },
+        { model: Affiliate,          as: 'affiliate' },
+        { model: TransportAssistant, as: 'transportAssistant' },
+        { model: ShippingLine,       as: 'shippingLine' },
+        { model: Patio,              as: 'origin' },
+        { model: Patio,              as: 'destination' },
+        { model: Operation,          as: 'operation' }
+      ],
+      order: [['created_at', 'DESC']]
+    });
 
     res.json(trips);
   } catch (error) {
@@ -136,14 +147,19 @@ exports.deleteTripById = async (req, res) => {
 
 exports.getProductionByAffiliate = async (req, res) => {
   try {
-    const { company_id } = req.user;
+    const { company_id, role } = req.user;
     const { year = new Date().getFullYear(), affiliate_id } = req.query;
 
-    const where = { company_id, active: true };
+    let where = { active: true };
 
-    // Si viene affiliate_id, filtra por ese afiliado
-    if (affiliate_id) {
-      where.affiliate_id = affiliate_id;
+    if (role === 3) {
+      // Afiliado: siempre ve solo lo suyo
+      where.affiliate_id = company_id;
+    } else {
+      // Admin: filtra por company_id de la empresa
+      where.company_id = company_id;
+      // Si admin seleccionó un afiliado específico
+      if (affiliate_id) where.affiliate_id = affiliate_id;
     }
 
     const trips = await Trip.findAll({
