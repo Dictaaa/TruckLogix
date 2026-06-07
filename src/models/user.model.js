@@ -39,7 +39,7 @@ User.init(
     country: DataTypes.STRING(100),
     role: DataTypes.INTEGER,
     company_id: DataTypes.INTEGER,
-    status: DataTypes.INTEGER,
+    active: DataTypes.INTEGER,
     created_at: {
     type: DataTypes.DATE,
     allowNull: true,
