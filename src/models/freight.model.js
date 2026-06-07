@@ -10,7 +10,17 @@ Freight.init({
     primaryKey: true,
   },
 
-  freight: {
+  freight_20: {
+    type: DataTypes.DECIMAL(15, 2),
+    defaultValue: 0,
+  },
+
+  freight_40: {
+    type: DataTypes.DECIMAL(15, 2),
+    defaultValue: 0,
+  },
+
+  freight_45: {
     type: DataTypes.DECIMAL(15, 2),
     defaultValue: 0,
   },
