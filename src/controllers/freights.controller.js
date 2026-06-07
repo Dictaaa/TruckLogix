@@ -22,8 +22,12 @@ exports.create = async (req, res) => {
     const freight = await Freight.create(req.body);
     res.status(201).json(freight);
   } catch (error) {
-    console.error('Error al crear freight:', error);
-    res.status(400).json({ error: 'Datos inválidos o incompletos' });
+    if (error.name === 'SequelizeUniqueConstraintError') {
+      return res.status(409).json({ 
+        error: 'Ya existe una tarifa para esta empresa, ruta y condición' 
+      });
+    }
+    res.status(400).json({ error: 'Datos inválidos' });
   }
 };
 

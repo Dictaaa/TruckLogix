@@ -70,6 +70,12 @@ Freight.init({
   modelName: 'Freight',
   tableName: 'freights',
   timestamps: false,
+  indexes: [
+    {
+      unique: true,
+      fields: ['transport_company_id', 'origin_id', 'destination_id', 'condition_id']
+    }
+  ]
 });
 
 Freight.associate = (models) => {
