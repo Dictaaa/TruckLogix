@@ -15,11 +15,35 @@ exports.list = async (req, res) => {
 // Crear un nuevo conductor
 exports.create = async (req, res) => {
   try {
+    if (req.body.document) {
+      const existing = await Driver.findOne({ where: { document: req.body.document } });
+      if (existing) {
+        return res.status(409).json({ error: 'Ya existe un conductor con este documento' });
+      }
+    }
     const driver = await Driver.create(req.body);
     res.status(201).json(driver);
   } catch (error) {
     console.error('Error al crear conductor:', error);
     res.status(400).json({ error: 'Datos inválidos o incompletos' });
+  }
+};
+
+exports.update = async (req, res) => {
+  try {
+    if (req.body.document) {
+      const existing = await Driver.findOne({ where: { document: req.body.document } });
+      if (existing && existing.id !== Number(req.params.id)) {
+        return res.status(409).json({ error: 'Ya existe un conductor con este documento' });
+      }
+    }
+    const [rows] = await Driver.update(req.body, { where: { id: req.params.id } });
+    if (!rows) return res.status(404).json({ error: 'No encontrado' });
+    const updated = await Driver.findByPk(req.params.id);
+    res.json(updated);
+  } catch (error) {
+    console.error('Error al actualizar conductor:', error);
+    res.status(400).json({ error: 'Datos inválidos' });
   }
 };
 
@@ -32,19 +56,6 @@ exports.getOne = async (req, res) => {
   } catch (error) {
     console.error('Error al obtener conductor:', error);
     res.status(500).json({ error: 'Error del servidor' });
-  }
-};
-
-// Actualizar un conductor
-exports.update = async (req, res) => {
-  try {
-    const [rows] = await Driver.update(req.body, { where: { id: req.params.id } });
-    if (!rows) return res.status(404).json({ error: 'No encontrado' });
-    const updated = await Driver.findByPk(req.params.id);
-    res.json(updated);
-  } catch (error) {
-    console.error('Error al actualizar conductor:', error);
-    res.status(400).json({ error: 'Datos inválidos' });
   }
 };
 

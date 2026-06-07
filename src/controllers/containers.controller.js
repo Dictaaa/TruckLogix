@@ -15,11 +15,45 @@ exports.list = async (req, res) => {
 // Crear un nuevo container
 exports.create = async (req, res) => {
   try {
-    const container = await Container.create(req.body);
+    if (req.body.number) {
+      const existing = await Container.findOne({ 
+        where: { number: req.body.number.trim().toUpperCase() } 
+      });
+      if (existing) {
+        return res.status(409).json({ error: 'Ya existe un contenedor con este número' });
+      }
+    }
+    const container = await Container.create({
+      ...req.body,
+      number: req.body.number?.trim().toUpperCase()
+    });
     res.status(201).json(container);
   } catch (error) {
     console.error('Error al crear container:', error);
     res.status(400).json({ error: 'Datos inválidos o incompletos' });
+  }
+};
+
+exports.update = async (req, res) => {
+  try {
+    if (req.body.number) {
+      const existing = await Container.findOne({ 
+        where: { number: req.body.number.trim().toUpperCase() } 
+      });
+      if (existing && existing.id !== Number(req.params.id)) {
+        return res.status(409).json({ error: 'Ya existe un contenedor con este número' });
+      }
+    }
+    const [rows] = await Container.update({
+      ...req.body,
+      number: req.body.number?.trim().toUpperCase()
+    }, { where: { id: req.params.id } });
+    if (!rows) return res.status(404).json({ error: 'No encontrado' });
+    const updated = await Container.findByPk(req.params.id);
+    res.json(updated);
+  } catch (error) {
+    console.error('Error al actualizar container:', error);
+    res.status(400).json({ error: 'Datos inválidos' });
   }
 };
 
@@ -53,19 +87,6 @@ exports.getOne = async (req, res) => {
   } catch (error) {
     console.error('Error al obtener container:', error);
     res.status(500).json({ error: 'Error del servidor' });
-  }
-};
-
-// Actualizar un container
-exports.update = async (req, res) => {
-  try {
-    const [rows] = await Container.update(req.body, { where: { id: req.params.id } });
-    if (!rows) return res.status(404).json({ error: 'No encontrado' });
-    const updated = await Container.findByPk(req.params.id);
-    res.json(updated);
-  } catch (error) {
-    console.error('Error al actualizar container:', error);
-    res.status(400).json({ error: 'Datos inválidos' });
   }
 };
 

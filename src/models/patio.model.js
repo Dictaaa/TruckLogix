@@ -15,26 +15,6 @@ Patio.init({
     allowNull: false,
   },
 
-//   address: {
-//     type: DataTypes.STRING(250),
-//     allowNull: true,
-//   },
-
-//   city: {
-//     type: DataTypes.STRING(100),
-//     allowNull: true,
-//   },
-
-//   contact_name: {
-//     type: DataTypes.STRING(150),
-//     allowNull: true,
-//   },
-
-//   contact_phone: {
-//     type: DataTypes.STRING(20),
-//     allowNull: true,
-//   },
-
   active: {
     type: DataTypes.BOOLEAN,
     defaultValue: true,

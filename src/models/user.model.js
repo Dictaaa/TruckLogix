@@ -40,16 +40,10 @@ User.init(
     role: DataTypes.INTEGER,
     company_id: DataTypes.INTEGER,
     status: DataTypes.INTEGER,
-
-    // Mapeo de campos de timestamps
-    // createdAt: {
-    //   type: DataTypes.DATE,
-    //   field: 'created_at',
-    // },
-    // updatedAt: {
-    //   type: DataTypes.DATE,
-    //   field: 'updated_at',
-    // },
+    created_at: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  }
   },
   {
     sequelize,
@@ -69,9 +63,5 @@ User.init(
     scopes: { withPassword: {} },
   }
 );
-
-User.associate = (models) => {
-  User.hasOne(models.Driver, { foreignKey: 'user_id', as: 'driver' });
-};
 
 module.exports = User;
