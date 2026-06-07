@@ -37,25 +37,36 @@ exports.create = async (req, res) => {
 
 exports.update = async (req, res) => {
   try {
+    const id = Number(req.params.id);
+
     if (req.body.email) {
       const existing = await User.findOne({ where: { email: req.body.email } });
-      if (existing && existing.id != Number(req.params.id)) {
+      if (existing && Number(existing.id) !== id) {
         return res.status(409).json({ error: 'Ya existe un usuario con este email' });
       }
     }
+
     if (req.body.document_number) {
       const existing = await User.findOne({ where: { document_number: req.body.document_number } });
-      if (existing && existing.id != Number(req.params.id)) {
+      if (existing && Number(existing.id) !== id) {
         return res.status(409).json({ error: 'Ya existe un usuario con este documento' });
       }
     }
+
+    // Busca la instancia primero
+    const user = await User.findByPk(id);
+    if (!user) return res.status(404).json({ error: 'Not found' });
+
     // Si viene password vacío, no actualizar
-    if (req.body.password == '' || req.body.password == null) {
+    if (req.body.password === '' || req.body.password === null) {
       delete req.body.password;
     }
-    const [rows] = await User.update(req.body, { where: { id: req.params.id } });
-    if (!rows) return res.status(404).json({ error: 'Not found' });
-    const updated = await User.findByPk(req.params.id);
+
+    // Usa instance.update() para que dispare el hook beforeUpdate
+    await user.update(req.body);
+
+    // Retorna sin password
+    const updated = await User.findByPk(id);
     res.json(updated);
   } catch (error) {
     console.error('Error al actualizar usuario:', error);
