@@ -33,7 +33,7 @@ exports.update = async (req, res) => {
   try {
     if (req.body.document_number) {
       const existing = await TransportAssistant.findOne({ where: { document_number: req.body.document_number } });
-      if (existing && existing.id !== Number(req.params.id)) {
+      if (existing && existing.id != Number(req.params.id)) {
         return res.status(409).json({ error: 'Ya existe un auxiliar con este documento' });
       }
     }

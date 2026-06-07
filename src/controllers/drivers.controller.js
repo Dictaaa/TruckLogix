@@ -33,7 +33,7 @@ exports.update = async (req, res) => {
   try {
     if (req.body.document) {
       const existing = await Driver.findOne({ where: { document: req.body.document } });
-      if (existing && existing.id !== Number(req.params.id)) {
+      if (existing && existing.id != Number(req.params.id)) {
         return res.status(409).json({ error: 'Ya existe un conductor con este documento' });
       }
     }

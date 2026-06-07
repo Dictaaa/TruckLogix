@@ -40,7 +40,7 @@ exports.update = async (req, res) => {
       const existing = await Container.findOne({ 
         where: { number: req.body.number.trim().toUpperCase() } 
       });
-      if (existing && existing.id !== Number(req.params.id)) {
+      if (existing && existing.id != Number(req.params.id)) {
         return res.status(409).json({ error: 'Ya existe un contenedor con este número' });
       }
     }

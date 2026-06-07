@@ -77,7 +77,7 @@ exports.update = async (req, res) => {
       const existing = await Vehicle.findOne({ 
         where: { plate: req.body.plate.trim().toUpperCase() } 
       });
-      if (existing && existing.id !== Number(req.params.id)) {
+      if (existing && existing.id != Number(req.params.id)) {
         return res.status(409).json({ error: 'Ya existe un vehículo con esta placa' });
       }
     }

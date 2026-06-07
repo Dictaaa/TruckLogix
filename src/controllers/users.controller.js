@@ -39,18 +39,18 @@ exports.update = async (req, res) => {
   try {
     if (req.body.email) {
       const existing = await User.findOne({ where: { email: req.body.email } });
-      if (existing && existing.id !== Number(req.params.id)) {
+      if (existing && existing.id != Number(req.params.id)) {
         return res.status(409).json({ error: 'Ya existe un usuario con este email' });
       }
     }
     if (req.body.document_number) {
       const existing = await User.findOne({ where: { document_number: req.body.document_number } });
-      if (existing && existing.id !== Number(req.params.id)) {
+      if (existing && existing.id != Number(req.params.id)) {
         return res.status(409).json({ error: 'Ya existe un usuario con este documento' });
       }
     }
     // Si viene password vacío, no actualizar
-    if (req.body.password === '' || req.body.password === null) {
+    if (req.body.password == '' || req.body.password == null) {
       delete req.body.password;
     }
     const [rows] = await User.update(req.body, { where: { id: req.params.id } });

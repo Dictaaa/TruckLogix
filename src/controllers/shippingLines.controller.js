@@ -37,7 +37,7 @@ exports.update = async (req, res) => {
       const existing = await ShippingLine.findOne({ 
         where: { nit: req.body.nit },
       });
-      if (existing && existing.id !== Number(req.params.id)) {
+      if (existing && existing.id != Number(req.params.id)) {
         return res.status(409).json({ error: 'Ya existe una línea naviera con este NIT' });
       }
     }
