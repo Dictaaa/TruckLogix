@@ -12,7 +12,6 @@ router
 
 router
   .route('/:id')
-  .get(auth, ctrl.getOne)        // GET /trucks/:id
   .put(auth, ctrl.update)        // PUT /trucks/:id
   .delete(auth, ctrl.remove);    // DELETE /trucks/:id
 
