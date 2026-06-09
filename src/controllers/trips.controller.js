@@ -65,40 +65,86 @@ exports.getTripById = async (req, res) => {
   }
 };
 
+const { Op } = require('sequelize');
+
 exports.getTripsByCompany = async (req, res) => {
   try {
     const { company_id, role } = req.user;
+    const {
+      page   = 1,
+      limit  = 10,
+      search = '',
+      column = '',  // columna específica para filtrar
+    } = req.query;
 
+    const offset = (Number(page) - 1) * Number(limit);
+
+    // Filtro base por rol
     let where = { active: true };
-
     if (role === 3) {
-      // Afiliado: ve solo sus viajes por affiliate_id
       where.affiliate_id = company_id;
     } else {
-      // Admin / Auxiliar: ve todos los viajes de la empresa
       where.company_id = company_id;
     }
 
-    const trips = await Trip.findAll({
+    // Búsqueda global — filtra en columnas del trip
+    // (búsqueda en relaciones se hace post-query en el frontend
+    //  o con subconsultas — aquí filtramos las columnas directas)
+    if (search) {
+      const searchOp = { [Op.like]: `%${search}%` };
+      if (column) {
+        // Filtro por columna específica si viene
+        where[column] = searchOp;
+      } else {
+        // Búsqueda global en columnas directas del trip
+        where[Op.or] = [
+          { '$container.number$':          { [Op.like]: `%${search}%` } },
+          { '$vehicle.plate$':             { [Op.like]: `%${search}%` } },
+          { '$driver.name$':               { [Op.like]: `%${search}%` } },
+          { '$affiliate.name$':            { [Op.like]: `%${search}%` } },
+          { '$transportCompany.name$':     { [Op.like]: `%${search}%` } },
+          { '$shippingLine.name$':         { [Op.like]: `%${search}%` } },
+          { '$client.name$':               { [Op.like]: `%${search}%` } },
+          { '$operation.name$':            { [Op.like]: `%${search}%` } },
+          { client_status:                 { [Op.like]: `%${search}%` } },
+          { work_status:                   { [Op.like]: `%${search}%` } },
+          { observations:                  { [Op.like]: `%${search}%` } },
+        ];
+      }
+    }
+
+    const include = [
+      { model: Driver,             as: 'driver',             required: false },
+      { model: Vehicle,            as: 'vehicle',            required: false },
+      { model: Company,            as: 'company',            required: false },
+      { model: Container,          as: 'container',          required: false },
+      { model: Client,             as: 'client',             required: false },
+      { model: TransportCompany,   as: 'transportCompany',   required: false },
+      { model: Affiliate,          as: 'affiliate',          required: false },
+      { model: TransportAssistant, as: 'transportAssistant', required: false },
+      { model: ShippingLine,       as: 'shippingLine',       required: false },
+      { model: Patio,              as: 'origin',             required: false },
+      { model: Patio,              as: 'destination',        required: false },
+      { model: Operation,          as: 'operation',          required: false },
+    ];
+
+    const { count, rows } = await Trip.findAndCountAll({
       where,
-      include: [
-        { model: Driver,             as: 'driver' },
-        { model: Vehicle,            as: 'vehicle' },
-        { model: Company,            as: 'company' },
-        { model: Container,          as: 'container' },
-        { model: Client,             as: 'client' },
-        { model: TransportCompany,   as: 'transportCompany' },
-        { model: Affiliate,          as: 'affiliate' },
-        { model: TransportAssistant, as: 'transportAssistant' },
-        { model: ShippingLine,       as: 'shippingLine' },
-        { model: Patio,              as: 'origin' },
-        { model: Patio,              as: 'destination' },
-        { model: Operation,          as: 'operation' }
-      ],
-      order: [['created_at', 'DESC']]
+      include,
+      order:    [['created_at', 'DESC']],
+      limit:    Number(limit),
+      offset,
+      subQuery: false, // necesario para búsquedas en relaciones con limit
+      distinct: true,
     });
 
-    res.json(trips);
+    res.json({
+      data:       rows,
+      total:      count,
+      page:       Number(page),
+      limit:      Number(limit),
+      totalPages: Math.ceil(count / Number(limit)),
+    });
   } catch (error) {
     console.error('Error al obtener los viajes:', error);
     res.status(500).json({ error: 'Error al obtener los viajes' });
