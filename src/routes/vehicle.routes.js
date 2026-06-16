@@ -16,7 +16,6 @@ router
   .delete(auth, ctrl.remove);    // DELETE /vehicles/:id
 
 router.get('/byCompany/:companyId', ctrl.listByCompany);
-router.get('/byCompanyAndUnassigned/:companyId/:userId', ctrl.listUnassignedVehiclesByCompanyAndUser);
 
 
 module.exports = router;

@@ -1,10 +1,14 @@
-const { Driver, User, VehicleDriverAssignment, Vehicle } = require('../models');
+const { Driver, User, VehicleDriverAssignment, Vehicle,Affiliate } = require('../models');
 
 
 // Listar todos los conductores con información del usuario
 exports.list = async (req, res) => {
   try {
-    const drivers = await Driver.findAll();
+    const drivers = await Driver.findAll({
+      include: [
+        { model: Affiliate, as: 'affiliate',   attributes: ['id', 'name'], required: false }
+      ]
+    });
     res.json(drivers);
   } catch (error) {
     console.error('Error al listar conductores:', error);

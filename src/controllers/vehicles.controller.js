@@ -1,9 +1,23 @@
-const Vehicle = require('../models/vehicle.model');
-const { Op, Sequelize } = require('sequelize');
+const {
+  Driver,
+  Vehicle,
+  Affiliate,
+  User
+} = require('../models');
 
 exports.list = async (req, res) => {
-  const vehicles = await Vehicle.findAll();
-  res.json(vehicles);
+  try {
+    const vehicles = await Vehicle.findAll({
+      include: [
+        { model: Driver,    as: 'driver',    attributes: ['id', 'name'], required: false },
+        { model: Affiliate, as: 'affiliate',   attributes: ['id', 'name'], required: false },
+      ]
+    });
+    res.json(vehicles);
+  } catch (error) {
+    console.error('Error al listar vehículos:', error);
+    res.status(500).json({ error: 'Error del servidor' });
+  }
 };
 
 exports.listByCompany = async (req, res) => {
@@ -21,32 +35,6 @@ exports.listByCompany = async (req, res) => {
   } catch (error) {
     console.error('Error fetching vehicles by company:', error);
     res.status(500).json({ error: 'Error fetching vehicles' });
-  }
-};
-
-exports.listUnassignedVehiclesByCompanyAndUser = async (req, res) => {
-  try {
-    const { companyId, userId } = req.params;
-
-    const vehicles = await Vehicle.findAll({
-      where: {
-        company_id: companyId,
-        active: true,
-        id: {
-          [Op.notIn]: Sequelize.literal(`(
-            SELECT vehicle_id
-            FROM vehicle_driver_assignments
-            WHERE driver_id = ${userId}
-              AND active = 1
-          )`)
-        }
-      }
-    });
-
-    res.json(vehicles);
-  } catch (error) {
-    console.error('Error fetching unassigned vehicles:', error);
-    res.status(500).json({ error: 'Error fetching unassigned vehicles' });
   }
 };
 

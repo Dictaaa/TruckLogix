@@ -34,9 +34,9 @@ Vehicle.init(
 
 Vehicle.associate = (models) => {
   Vehicle.hasMany(models.Trip, { foreignKey: 'vehicle_id', as: 'trips' });
-  Vehicle.belongsTo(models.Company, {
+  Vehicle.belongsTo(models.Affiliate, {
     foreignKey: 'company_id',
-    as: 'company'
+    as: 'affiliate'
   });
   Vehicle.belongsTo(models.Driver, {
     foreignKey: 'driver_id',

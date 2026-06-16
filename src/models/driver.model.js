@@ -36,9 +36,9 @@ Driver.init(
 Driver.associate = (models) => {
   Driver.hasMany(models.VehicleDriverAssignment, { foreignKey: 'driver_id', as: 'assignments' });
   Driver.hasMany(models.Trip, { foreignKey: 'driver_id', as: 'trips' });
-  Driver.belongsTo(models.Company, {
+  Driver.belongsTo(models.Affiliate, {
     foreignKey: 'company_id',
-    as: 'company'
+    as: 'affiliate'
   });
 };
 
