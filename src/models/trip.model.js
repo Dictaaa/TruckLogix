@@ -74,6 +74,11 @@ Trip.init({
     allowNull: true,
   },
 
+  client_id: {
+  type: DataTypes.INTEGER.UNSIGNED,
+  allowNull: true,
+},
+
   client_status: {
     type: DataTypes.STRING(50),
     allowNull: true,
