@@ -6,6 +6,10 @@ class Driver extends Model {}
 Driver.init(
   {
     id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    company_id: {
+    type: DataTypes.INTEGER.UNSIGNED,
+    allowNull: false,
+  },
     name: DataTypes.STRING,
     phone: DataTypes.INTEGER,
     document: DataTypes.INTEGER,
@@ -32,6 +36,10 @@ Driver.init(
 Driver.associate = (models) => {
   Driver.hasMany(models.VehicleDriverAssignment, { foreignKey: 'driver_id', as: 'assignments' });
   Driver.hasMany(models.Trip, { foreignKey: 'driver_id', as: 'trips' });
+  Driver.belongsTo(models.Company, {
+    foreignKey: 'company_id',
+    as: 'company'
+  });
 };
 
 
