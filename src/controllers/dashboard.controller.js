@@ -1,4 +1,4 @@
-const { Trip, Vehicle, Driver, Affiliate, Company } = require('../models');
+const { Trip, Vehicle, Driver, Affiliate, Company, AffiliateBudget } = require('../models');
 const { Op } = require('sequelize');
 
 exports.getDashboard = async (req, res) => {
@@ -14,6 +14,17 @@ exports.getDashboard = async (req, res) => {
     const daysInMonth   = new Date(thisYear, thisMonth, 0).getDate();
     const dayOfMonth    = now.getDate();
     const daysRemaining = daysInMonth - dayOfMonth;
+
+    const budgets = await AffiliateBudget.findAll({
+  where: { year: thisYear , company_id },
+});
+
+// Crea un mapa affiliateId→mes→presupuesto
+const budgetMap = {};
+budgets.forEach(b => {
+  if (!budgetMap[b.affiliate_id]) budgetMap[b.affiliate_id] = {};
+  budgetMap[b.affiliate_id][b.month] = Number(b.budget);
+});
 
     // Filtro base según rol
     const tripWhere = { active: true };
@@ -79,8 +90,14 @@ exports.getDashboard = async (req, res) => {
       }
     });
 
+    // Meses activos (para las columnas)
+    const activeMonths = [...new Set(
+      yearTrips.map(t => new Date(t.trip_date).getMonth() + 1)
+    )].sort((a, b) => a - b);
+
     // Calcula proyección y documentos por vencer
     const result = Object.values(affiliateMap).map((aff) => {
+        const affBudgets = budgetMap[aff.id] ?? {};
       const plates = Object.values(aff.plates).map((p) => {
         // Proyección: valor diario promedio × días restantes + acumulado
         const dailyAvg    = dayOfMonth > 0 ? p.monthValue / dayOfMonth : 0;
@@ -115,23 +132,35 @@ exports.getDashboard = async (req, res) => {
         };
       });
 
-      const affMonthTotal = plates.reduce((s, p) => s + p.monthValue, 0);
-      const affYearTotal  = plates.reduce((s, p) => s + p.totalYear,  0);
+      const affMonthTotal  = plates.reduce((s, p) => s + p.monthValue, 0);
+  const affYearTotal   = plates.reduce((s, p) => s + p.totalYear,  0);
+  const affMonthBudget = affBudgets[thisMonth] ?? 0;
+  const cumplimiento   = affMonthBudget > 0
+    ? Math.round((affMonthTotal / affMonthBudget) * 100)
+    : null;
 
-      return {
-        id:           aff.id,
-        name:         aff.name,
-        plates,
-        monthTotal:   affMonthTotal,
-        yearTotal:    affYearTotal,
-        proyeccion:   plates.reduce((s, p) => s + p.proyeccion, 0),
-      };
-    });
+  // Cumplimiento por mes (para la tabla)
+  const monthlyCompliance = {};
+  activeMonths.forEach(m => {
+    const monthTotal  = plates.reduce((s, p) => s + (p.months[m] || 0), 0);
+    const monthBudget = affBudgets[m] ?? 0;
+    monthlyCompliance[m] = monthBudget > 0
+      ? Math.round((monthTotal / monthBudget) * 100)
+      : null;
+  });
 
-    // Meses activos (para las columnas)
-    const activeMonths = [...new Set(
-      yearTrips.map(t => new Date(t.trip_date).getMonth() + 1)
-    )].sort((a, b) => a - b);
+  return {
+    id:                aff.id,
+    name:              aff.name,
+    plates,
+    monthTotal:        affMonthTotal,
+    yearTotal:         affYearTotal,
+    proyeccion:        plates.reduce((s, p) => s + p.proyeccion, 0),
+    budgets:           affBudgets,       // presupuesto por mes
+    cumplimiento,                        // % mes actual
+    monthlyCompliance,                   // % por mes
+  };
+});
 
     // Agrega esto antes del res.json() final
 
