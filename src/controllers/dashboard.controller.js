@@ -131,6 +131,33 @@ exports.getDashboard = async (req, res) => {
       yearTrips.map(t => new Date(t.trip_date).getMonth() + 1)
     )].sort((a, b) => a - b);
 
+    // Agrega esto antes del res.json() final
+
+const yesterday = new Date(today);
+yesterday.setDate(yesterday.getDate() - 1);
+const yesterdayStr = yesterday.toISOString().substring(0, 10);
+
+// Viajes de ayer
+const yesterdayTrips = yearTrips.filter(t =>
+  t.trip_date && t.trip_date.toString().substring(0, 10) === yesterdayStr
+);
+
+// Facturación por mes del año
+const monthlyBilling = {};
+for (let m = 1; m <= 12; m++) monthlyBilling[m] = 0;
+yearTrips.forEach(t => {
+  const m = new Date(t.trip_date).getMonth() + 1;
+  monthlyBilling[m] = (monthlyBilling[m] || 0) + Number(t.freight_value || 0);
+});
+
+// Facturación del mes actual
+const thisMonthTotal = monthlyBilling[thisMonth] || 0;
+
+// Total viajes del mes
+const thisMonthTrips = yearTrips.filter(t =>
+  new Date(t.trip_date).getMonth() + 1 === thisMonth
+).length;
+
     res.json({
       affiliates:   result,
       activeMonths,
