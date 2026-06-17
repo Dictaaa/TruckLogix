@@ -158,14 +158,22 @@ const thisMonthTrips = yearTrips.filter(t =>
   new Date(t.trip_date).getMonth() + 1 === thisMonth
 ).length;
 
-    res.json({
-      affiliates:   result,
-      activeMonths,
-      thisMonth,
-      daysInMonth,
-      dayOfMonth,
-      daysRemaining,
-    });
+res.json({
+  affiliates,
+  activeMonths,
+  thisMonth,
+  daysInMonth,
+  dayOfMonth,
+  daysRemaining,
+  kpis: {
+    yesterdayTrips:  yesterdayTrips.length,
+    yesterdayBilling: yesterdayTrips.reduce((s, t) => s + Number(t.freight_value || 0), 0),
+    thisMonthTotal,
+    thisMonthTrips,
+    monthlyBilling,   // objeto mes→valor para la gráfica
+  }
+});
+
   } catch (error) {
     console.error('Error dashboard:', error);
     res.status(500).json({ error: 'Error del servidor' });
