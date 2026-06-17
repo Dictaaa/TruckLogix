@@ -159,7 +159,7 @@ const thisMonthTrips = yearTrips.filter(t =>
 ).length;
 
 res.json({
-  affiliates,
+  affiliates: result,
   activeMonths,
   thisMonth,
   daysInMonth,
