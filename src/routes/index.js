@@ -21,6 +21,7 @@ const affiliatesRoutes = require('./affiliates.routes');
 const containersRoutes = require('./containers.routes');
 const freightsRoutes = require('./freights.routes');
 const operationsRoutes = require('./operations.routes');
+const dashboardRoutes = require('./dashboard.routes');
 
 const router = Router();
 router.use('/auth', authRoutes);
@@ -45,5 +46,6 @@ router.use('/affiliates', affiliatesRoutes);
 router.use('/containers', containersRoutes);
 router.use('/freights', freightsRoutes);
 router.use('/operations', operationsRoutes);
+router.use('/dashboard', dashboardRoutes);
 
 module.exports = router;
