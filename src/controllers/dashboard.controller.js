@@ -4,6 +4,7 @@ const { Op } = require('sequelize');
 exports.getDashboard = async (req, res) => {
   try {
     const { company_id, role } = req.user;
+    const { affiliate_id } = req.query;
     const now       = new Date();
     const thisYear  = now.getFullYear();
     const thisMonth = now.getMonth() + 1;
@@ -20,6 +21,7 @@ exports.getDashboard = async (req, res) => {
       tripWhere.affiliate_id = company_id;
     } else {
       tripWhere.company_id = company_id;
+      if (affiliate_id) tripWhere.affiliate_id = affiliate_id;
     }
 
     // Todos los viajes del año en curso
