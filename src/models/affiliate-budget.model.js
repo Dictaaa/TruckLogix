@@ -24,9 +24,9 @@ AffiliateBudget.init(
             allowNull: false,
         },
         company_id: {
-  type: DataTypes.INTEGER.UNSIGNED,
-  allowNull: false,
-},
+            type: DataTypes.INTEGER.UNSIGNED,
+            allowNull: false,
+        },
         active: {
             type: DataTypes.BOOLEAN,
             defaultValue: true,
@@ -42,6 +42,12 @@ AffiliateBudget.init(
         modelName: 'AffiliateBudget',
         tableName: 'affiliate_budgets',
         timestamps: false,
+        indexes: [
+            {
+                unique: true,
+                fields: ['affiliate_id', 'year', 'month']
+            }
+        ]
     }
 );
 AffiliateBudget.associate = (models) => {

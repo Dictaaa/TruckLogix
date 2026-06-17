@@ -33,12 +33,20 @@ exports.upsert = async (req, res) => {
       return res.status(400).json({ error: 'Faltan campos requeridos' });
     }
 
-    const [record, created] = await AffiliateBudget.upsert(
-      { affiliate_id, year, month, budget, company_id },
-      { returning: true }
-    );
+    const existing = await AffiliateBudget.findOne({
+      where: { affiliate_id, year, month, company_id }
+    });
 
-    res.status(created ? 201 : 200).json(record);
+    if (existing) {
+      await existing.update({ budget });
+      return res.json(existing);
+    }
+
+    const record = await AffiliateBudget.create({
+      affiliate_id, year, month, budget, company_id
+    });
+
+    res.status(201).json(record);
   } catch (error) {
     console.error('Error al guardar presupuesto:', error);
     res.status(500).json({ error: 'Error del servidor' });
@@ -54,13 +62,24 @@ exports.upsertMany = async (req, res) => {
       return res.status(400).json({ error: 'Faltan campos requeridos' });
     }
 
-    const records = await Promise.all(
-      budgets.map(({ month, budget }) =>
-        AffiliateBudget.upsert({ affiliate_id, year, month, budget, company_id })
-      )
+    const results = await Promise.all(
+      budgets.map(async ({ month, budget }) => {
+        const existing = await AffiliateBudget.findOne({
+          where: { affiliate_id, year, month, company_id }
+        });
+
+        if (existing) {
+          await existing.update({ budget });
+          return existing;
+        }
+
+        return AffiliateBudget.create({
+          affiliate_id, year, month, budget, company_id
+        });
+      })
     );
 
-    res.json({ saved: records.length });
+    res.json({ saved: results.length });
   } catch (error) {
     console.error('Error al guardar presupuestos:', error);
     res.status(500).json({ error: 'Error del servidor' });
