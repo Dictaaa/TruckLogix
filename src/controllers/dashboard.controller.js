@@ -117,7 +117,7 @@ exports.getDashboard = async (req, res) => {
                     const date = p[field];
                     if (!date) return;
                     const daysLeft = Math.ceil((new Date(date) - today) / 86400000);
-                    if (daysLeft <= 60) {
+                    if (daysLeft <= 30) {
                         docAlerts.push({
                             type: field === 'soat_expiration' ? 'SOAT' : 'RTM',
                             expiration: date.toString().substring(0, 10),
