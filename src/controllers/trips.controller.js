@@ -39,19 +39,19 @@ exports.getTripById = async (req, res) => {
     const trip = await Trip.findOne({
       where: { id, company_id, active: true },
       include: [
-  { model: Driver, as: 'driver' },
-  { model: Vehicle, as: 'vehicle' },
-  { model: Company, as: 'company' },
-  { model: Container, as: 'container' },
-  { model: TransportCompany, as: 'transportCompany' },
-  { model: Client, as: 'client' },
-  { model: Affiliate, as: 'affiliate' },
-  { model: TransportAssistant, as: 'transportAssistant' },
-  { model: ShippingLine, as: 'shippingLine' },
-  { model: Patio, as: 'origin' },
-    { model: Patio, as: 'destination' },
-  { model: Operation, as: 'operation' }
-],
+        { model: Driver, as: 'driver' },
+        { model: Vehicle, as: 'vehicle' },
+        { model: Company, as: 'company' },
+        { model: Container, as: 'container' },
+        { model: TransportCompany, as: 'transportCompany' },
+        { model: Client, as: 'client' },
+        { model: Affiliate, as: 'affiliate' },
+        { model: TransportAssistant, as: 'transportAssistant' },
+        { model: ShippingLine, as: 'shippingLine' },
+        { model: Patio, as: 'origin' },
+        { model: Patio, as: 'destination' },
+        { model: Operation, as: 'operation' }
+      ],
     });
 
     if (!trip) {
@@ -71,8 +71,8 @@ exports.getTripsByCompany = async (req, res) => {
   try {
     const { company_id, role } = req.user;
     const {
-      page   = 1,
-      limit  = 10,
+      page = 1,
+      limit = 10,
       search = '',
       column = '',  // columna específica para filtrar
     } = req.query;
@@ -98,51 +98,74 @@ exports.getTripsByCompany = async (req, res) => {
       } else {
         // Búsqueda global en columnas directas del trip
         where[Op.or] = [
-          { '$container.number$':          { [Op.like]: `%${search}%` } },
-          { '$vehicle.plate$':             { [Op.like]: `%${search}%` } },
-          { '$driver.name$':               { [Op.like]: `%${search}%` } },
-          { '$affiliate.name$':            { [Op.like]: `%${search}%` } },
-          { '$transportCompany.name$':     { [Op.like]: `%${search}%` } },
-          { '$shippingLine.name$':         { [Op.like]: `%${search}%` } },
-          { '$client.name$':               { [Op.like]: `%${search}%` } },
-          { '$operation.name$':            { [Op.like]: `%${search}%` } },
-          { client_status:                 { [Op.like]: `%${search}%` } },
-          { work_status:                   { [Op.like]: `%${search}%` } },
-          { observations:                  { [Op.like]: `%${search}%` } },
+          { '$container.number$': { [Op.like]: `%${search}%` } },
+          { '$vehicle.plate$': { [Op.like]: `%${search}%` } },
+          { '$driver.name$': { [Op.like]: `%${search}%` } },
+          { '$affiliate.name$': { [Op.like]: `%${search}%` } },
+          { '$transportCompany.name$': { [Op.like]: `%${search}%` } },
+          { '$shippingLine.name$': { [Op.like]: `%${search}%` } },
+          { '$client.name$': { [Op.like]: `%${search}%` } },
+          { '$operation.name$': { [Op.like]: `%${search}%` } },
+          { client_status: { [Op.like]: `%${search}%` } },
+          { work_status: { [Op.like]: `%${search}%` } },
+          { observations: { [Op.like]: `%${search}%` } },
         ];
       }
     }
 
     const include = [
-      { model: Driver,             as: 'driver',             required: false },
-      { model: Vehicle,            as: 'vehicle',            required: false },
-      { model: Company,            as: 'company',            required: false },
-      { model: Container,          as: 'container',          required: false },
-      { model: Client,             as: 'client',             required: false },
-      { model: TransportCompany,   as: 'transportCompany',   required: false },
-      { model: Affiliate,          as: 'affiliate',          required: false },
+      { model: Driver, as: 'driver', required: false },
+      { model: Vehicle, as: 'vehicle', required: false },
+      { model: Company, as: 'company', required: false },
+      { model: Container, as: 'container', required: false },
+      { model: Client, as: 'client', required: false },
+      { model: TransportCompany, as: 'transportCompany', required: false },
+      { model: Affiliate, as: 'affiliate', required: false },
       { model: TransportAssistant, as: 'transportAssistant', required: false },
-      { model: ShippingLine,       as: 'shippingLine',       required: false },
-      { model: Patio,              as: 'origin',             required: false },
-      { model: Patio,              as: 'destination',        required: false },
-      { model: Operation,          as: 'operation',          required: false },
+      { model: ShippingLine, as: 'shippingLine', required: false },
+      { model: Patio, as: 'origin', required: false },
+      { model: Patio, as: 'destination', required: false },
+      { model: Operation, as: 'operation', required: false },
     ];
+
+    const columnMap = {
+      fecha: 'trip_date',
+      empresaTransporte: 'transport_company_id',
+      placa: 'vehicle_id',
+      contenedor: 'container_id',
+      cliente: 'client_id',
+      linea: 'shipping_line_id',
+      origen: 'origin_id',
+      destino: 'destination_id',
+      operacion: 'operation_id',
+      conductor: 'driver_id',
+      estado: 'client_status',
+      flete: 'freight_value',
+      afiliado: 'affiliate_id',
+      auxiliarTransporte: 'transport_assistant_id',
+      transporteComida: 'transport_food_value',
+      observacion: 'observations',
+    };
+
+    const sortDir = req.query.sortDir === 'asc' ? 'ASC' : 'DESC';
+    const sortCol = columnMap[req.query.sortBy] || 'trip_date';
+    const order = [[sortCol, sortDir]];
 
     const { count, rows } = await Trip.findAndCountAll({
       where,
       include,
-      order:    [['created_at', 'DESC']],
-      limit:    Number(limit),
+      order,
+      limit: Number(limit),
       offset,
       subQuery: false, // necesario para búsquedas en relaciones con limit
       distinct: true,
     });
 
     res.json({
-      data:       rows,
-      total:      count,
-      page:       Number(page),
-      limit:      Number(limit),
+      data: rows,
+      total: count,
+      page: Number(page),
+      limit: Number(limit),
       totalPages: Math.ceil(count / Number(limit)),
     });
   } catch (error) {
@@ -211,7 +234,7 @@ exports.getProductionByAffiliate = async (req, res) => {
     const trips = await Trip.findAll({
       where,
       include: [
-        { model: Vehicle,   as: 'vehicle',   attributes: ['plate'] },
+        { model: Vehicle, as: 'vehicle', attributes: ['plate'] },
         { model: Affiliate, as: 'affiliate', attributes: ['id', 'name'] },
       ],
       attributes: ['id', 'trip_date', 'freight_value', 'affiliate_id', 'vehicle_id'],
@@ -226,9 +249,9 @@ exports.getProductionByAffiliate = async (req, res) => {
 
     filtered.forEach((trip) => {
       const affiliateName = trip.affiliate?.name ?? 'Sin afiliado';
-      const plate         = trip.vehicle?.plate  ?? 'Sin placa';
-      const month         = new Date(trip.trip_date).getMonth() + 1;
-      const value         = Number(trip.freight_value || 0);
+      const plate = trip.vehicle?.plate ?? 'Sin placa';
+      const month = new Date(trip.trip_date).getMonth() + 1;
+      const value = Number(trip.freight_value || 0);
 
       if (!result[affiliateName]) result[affiliateName] = {};
       if (!result[affiliateName][plate]) {
