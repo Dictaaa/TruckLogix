@@ -69,10 +69,11 @@ const budgets = await AffiliateBudget.findAll({ where: budgetWhere });
         const affiliateMap = {};
 
         yearTrips.forEach(trip => {
+            const tripDateCol = new Date(trip.trip_date.toString().substring(0, 10) + 'T12:00:00');
             const affName = trip.affiliate?.name ?? 'Sin afiliado';
             const affId = trip.affiliate_id ?? 0;
             const plate = trip.vehicle?.plate ?? 'Sin placa';
-            const month = new Date(trip.trip_date).getMonth() + 1;
+            const month = tripDateCol.getMonth() + 1;
             const value = Number(trip.freight_value || 0);
             const soat = trip.vehicle?.soat_expiration ?? null;
             const rtm = trip.vehicle?.rtm_expiration ?? null;
