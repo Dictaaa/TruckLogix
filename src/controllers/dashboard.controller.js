@@ -5,17 +5,26 @@ exports.getDashboard = async (req, res) => {
     try {
         const { company_id, role } = req.user;
         const { affiliate_id } = req.query;
-        const now = new Date();
-        const thisYear = now.getFullYear();
-        const thisMonth = now.getMonth() + 1;
-        const today = now;
-        const yesterday = new Date(today);
-        yesterday.setDate(yesterday.getDate() - 1);
-        const yesterdayStr = yesterday.toISOString().substring(0, 10);
+        // Fecha actual en Colombia (UTC-5)
+        const toColombiaDateStr = (date) => {
+            const offset = -5 * 60; // UTC-5 en minutos
+            const local = new Date(date.getTime() + offset * 60000);
+            return local.toISOString().substring(0, 10);
+        };
 
-        // Días transcurridos y restantes del mes
+        const now = new Date();
+        const todayStr = toColombiaDateStr(now);
+
+        const yesterdayUTC = new Date(now);
+        yesterdayUTC.setDate(yesterdayUTC.getDate() - 1);
+        const yesterdayStr = toColombiaDateStr(yesterdayUTC);
+
+        // Hora colombiana para cálculos de mes/día
+        const nowColombia = new Date(now.getTime() + (-5 * 60) * 60000);
+        const thisYear = nowColombia.getUTCFullYear();
+        const thisMonth = nowColombia.getUTCMonth() + 1;
         const daysInMonth = new Date(thisYear, thisMonth, 0).getDate();
-        const dayOfMonth = now.getDate();
+        const dayOfMonth = nowColombia.getUTCDate();
         const daysRemaining = daysInMonth - dayOfMonth;
 
         const budgets = await AffiliateBudget.findAll({
@@ -116,7 +125,7 @@ exports.getDashboard = async (req, res) => {
                 ['soat_expiration', 'rtm_expiration'].forEach(field => {
                     const date = p[field];
                     if (!date) return;
-                    const daysLeft = Math.ceil((new Date(date) - today) / 86400000);
+                    const daysLeft = Math.ceil((new Date(date) - now) / 86400000);
                     if (daysLeft <= 30) {
                         docAlerts.push({
                             type: field === 'soat_expiration' ? 'SOAT' : 'RTM',
@@ -135,7 +144,7 @@ exports.getDashboard = async (req, res) => {
                     monthValue: p.monthValue,
                     monthTrips: p.monthTrips,
                     totalTrips: p.totalTrips,
-                    yesterdayTrips: p.yesterdayTrips, 
+                    yesterdayTrips: p.yesterdayTrips,
                     proyeccion: Math.round(proyeccion),
                     docAlerts,
                 };

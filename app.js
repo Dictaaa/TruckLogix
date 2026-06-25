@@ -1,4 +1,5 @@
 // src/app.js
+process.env.TZ = 'America/Bogota';
 const express = require('express');
 require('express-async-errors');         // captura async/await
 const cors = require('cors');
