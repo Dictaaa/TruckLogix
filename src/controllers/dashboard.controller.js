@@ -27,9 +27,11 @@ exports.getDashboard = async (req, res) => {
         const dayOfMonth = nowColombia.getUTCDate();
         const daysRemaining = daysInMonth - dayOfMonth;
 
-        const budgets = await AffiliateBudget.findAll({
-            where: { year: thisYear, company_id },
-        });
+        const budgetWhere = role === 3
+    ? { year: thisYear, affiliate_id: company_id }
+    : { year: thisYear, company_id };
+
+const budgets = await AffiliateBudget.findAll({ where: budgetWhere });
 
         // Crea un mapa affiliateId→mes→presupuesto
         const budgetMap = {};
