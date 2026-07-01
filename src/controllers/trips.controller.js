@@ -71,10 +71,11 @@ exports.getTripsByCompany = async (req, res) => {
   try {
     const { company_id, role } = req.user;
     const {
-      page = 1,
-      limit = 10,
-      search = '',
-      column = '',  // columna específica para filtrar
+      page = 1, limit = 10, search = '', column = '',
+      fecha_desde, fecha_hasta, estado,
+      afiliado, linea, conductor, placa,
+      empresa_transporte, auxiliar, contenedor,
+      origen, destino, cliente, operacion,
     } = req.query;
 
     const offset = (Number(page) - 1) * Number(limit);
@@ -112,6 +113,27 @@ exports.getTripsByCompany = async (req, res) => {
         ];
       }
     }
+
+    // Filtros por ID (vienen del panel)
+    if (afiliado) where.affiliate_id = afiliado;
+    if (conductor) where.driver_id = conductor;
+    if (empresa_transporte) where.transport_company_id = empresa_transporte;
+    if (auxiliar) where.transport_assistant_id = auxiliar;
+    if (cliente) where.client_id = cliente;
+    if (operacion) where.operation_id = operacion;
+    if (origen) where.origin_id = origen;
+    if (destino) where.destination_id = destino;
+    if (linea) where.shipping_line_id = linea;
+    if (placa) where.vehicle_id = placa;
+    if (contenedor) where.container_id = contenedor;
+
+    if (fecha_desde || fecha_hasta) {
+      where.trip_date = {};
+      if (fecha_desde) where.trip_date[Op.gte] = fecha_desde;
+      if (fecha_hasta) where.trip_date[Op.lte] = fecha_hasta;
+    }
+
+    if (estado) where.client_status = estado;
 
     const include = [
       { model: Driver, as: 'driver', required: false },
