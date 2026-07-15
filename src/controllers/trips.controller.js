@@ -16,12 +16,39 @@ const {
 
 exports.createTrip = async (req, res) => {
   try {
-    const { id: userId, company_id } = req.user; // Suponiendo que viene del JWT
+    const { id: userId, company_id } = req.user;
+    const { vehicle_id } = req.body;
+
+    // Validar documentos del vehículo
+    if (vehicle_id) {
+      const vehicle = await Vehicle.findByPk(vehicle_id);
+      if (vehicle) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const soatExp = vehicle.soat_expiration ? new Date(vehicle.soat_expiration) : null;
+        const rtmExp  = vehicle.rtm_expiration  ? new Date(vehicle.rtm_expiration)  : null;
+
+        const soatVencido = soatExp && soatExp < today;
+        const rtmVencido  = rtmExp  && rtmExp  < today;
+
+        if (soatVencido || rtmVencido) {
+          const docs = [
+            soatVencido ? 'SOAT' : null,
+            rtmVencido  ? 'RTM'  : null,
+          ].filter(Boolean).join(' y ');
+
+          return res.status(422).json({
+            error: `El vehículo tiene ${docs} vencido(s). No se pueden registrar movimientos.`
+          });
+        }
+      }
+    }
 
     const newTrip = await Trip.create({
       ...req.body,
       user_id: userId,
-      company_id, // Asegura que la compañía del usuario quede ligada al viaje
+      company_id,
     });
 
     res.status(201).json(newTrip);
@@ -200,15 +227,30 @@ exports.updateTripById = async (req, res) => {
   try {
     const { company_id } = req.user;
     const { id } = req.params;
+    const { vehicle_id } = req.body;
 
-    const trip = await Trip.findOne({ where: { id, company_id } });
+    // Validar documentos si viene vehicle_id
+    if (vehicle_id) {
+      const vehicle = await Vehicle.findByPk(vehicle_id);
+      if (vehicle) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const soatVencido = vehicle.soat_expiration && new Date(vehicle.soat_expiration) < today;
+        const rtmVencido  = vehicle.rtm_expiration  && new Date(vehicle.rtm_expiration)  < today;
 
-    if (!trip) {
-      return res.status(404).json({ error: 'Viaje no encontrado' });
+        if (soatVencido || rtmVencido) {
+          const docs = [soatVencido ? 'SOAT' : null, rtmVencido ? 'RTM' : null].filter(Boolean).join(' y ');
+          return res.status(422).json({
+            error: `El vehículo tiene ${docs} vencido(s). No se pueden registrar movimientos.`
+          });
+        }
+      }
     }
 
-    await trip.update(req.body);
+    const trip = await Trip.findOne({ where: { id, company_id } });
+    if (!trip) return res.status(404).json({ error: 'Viaje no encontrado' });
 
+    await trip.update(req.body);
     res.status(200).json(trip);
   } catch (error) {
     console.error('Error al actualizar el viaje:', error);

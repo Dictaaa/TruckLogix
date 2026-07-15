@@ -183,42 +183,46 @@ const budgets = await AffiliateBudget.findAll({ where: budgetWhere });
             };
         });
 
-        // Viajes de ayer
-        const yesterdayTrips = yearTrips.filter(t =>
-            t.trip_date && t.trip_date.toString().substring(0, 10) === yesterdayStr
-        );
+        // Función helper para extraer mes correctamente
+const getMonthFromTrip = (trip) => {
+  const dateStr = trip.trip_date.toString().substring(0, 10);
+  return new Date(dateStr + 'T12:00:00').getMonth() + 1;
+};
 
-        // Facturación por mes del año
-        const monthlyBilling = {};
-        for (let m = 1; m <= 12; m++) monthlyBilling[m] = 0;
-        yearTrips.forEach(t => {
-            const m = new Date(t.trip_date).getMonth() + 1;
-            monthlyBilling[m] = (monthlyBilling[m] || 0) + Number(t.freight_value || 0);
-        });
+// Facturación por mes — usando la misma lógica que affiliateMap
+const monthlyBilling = {};
+for (let m = 1; m <= 12; m++) monthlyBilling[m] = 0;
+yearTrips.forEach(t => {
+  const m = getMonthFromTrip(t);
+  monthlyBilling[m] = (monthlyBilling[m] || 0) + Number(t.freight_value || 0);
+});
 
-        // Facturación del mes actual
-        const thisMonthTotal = monthlyBilling[thisMonth] || 0;
+// thisMonthTotal — suma directa del mes actual
+const thisMonthTotal = monthlyBilling[thisMonth] || 0;
 
-        // Total viajes del mes
-        const thisMonthTrips = yearTrips.filter(t =>
-            new Date(t.trip_date).getMonth() + 1 === thisMonth
-        ).length;
+// thisMonthTrips — usando helper
+const thisMonthTrips = yearTrips.filter(t => getMonthFromTrip(t) === thisMonth).length;
 
-        res.json({
-            affiliates: result,
-            activeMonths,
-            thisMonth,
-            daysInMonth,
-            dayOfMonth,
-            daysRemaining,
-            kpis: {
-                yesterdayTrips: yesterdayTrips.length,
-                yesterdayBilling: yesterdayTrips.reduce((s, t) => s + Number(t.freight_value || 0), 0),
-                thisMonthTotal,
-                thisMonthTrips,
-                monthlyBilling,   // objeto mes→valor para la gráfica
-            }
-        });
+// yesterdayTrips — ya está bien con substring
+const yesterdayTrips = yearTrips.filter(t =>
+  t.trip_date && t.trip_date.toString().substring(0, 10) === yesterdayStr
+);
+
+res.json({
+  affiliates: result,
+  activeMonths,
+  thisMonth,
+  daysInMonth,
+  dayOfMonth,
+  daysRemaining,
+  kpis: {
+    yesterdayTrips:   yesterdayTrips.length,
+    yesterdayBilling: yesterdayTrips.reduce((s, t) => s + Number(t.freight_value || 0), 0),
+    thisMonthTotal,
+    thisMonthTrips,
+    monthlyBilling,
+  }
+});
 
     } catch (error) {
         console.error('Error dashboard:', error);
