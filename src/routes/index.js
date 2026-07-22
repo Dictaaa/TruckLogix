@@ -23,6 +23,7 @@ const freightsRoutes = require('./freights.routes');
 const operationsRoutes = require('./operations.routes');
 const dashboardRoutes = require('./dashboard.routes');
 const affiliateBudgetRoutes = require('./affiliate-budget.routes');
+const fuelLogRoutes = require('./fuelLog.routes');
 
 const router = Router();
 router.use('/auth', authRoutes);
@@ -49,5 +50,6 @@ router.use('/freights', freightsRoutes);
 router.use('/operations', operationsRoutes);
 router.use('/dashboard', dashboardRoutes);
 router.use('/affiliate-budgets', affiliateBudgetRoutes);
+router.use('/fuel-logs', fuelLogRoutes);
 
 module.exports = router;

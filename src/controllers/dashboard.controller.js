@@ -1,4 +1,4 @@
-const { Trip, Vehicle, Driver, Affiliate, Company, AffiliateBudget } = require('../models');
+const { Trip, Vehicle, Driver, Affiliate, Company, AffiliateBudget, FuelLog  } = require('../models');
 const { Op } = require('sequelize');
 
 exports.getDashboard = async (req, res) => {
@@ -208,6 +208,71 @@ const yesterdayTrips = yearTrips.filter(t =>
   t.trip_date && t.trip_date.toString().substring(0, 10) === yesterdayStr
 );
 
+// ─── COMBUSTIBLE ──────────────────────────────────────────────────────────────
+const fuelWhere = { active: true };
+if (role === 3) {
+    fuelWhere.affiliate_id = company_id;
+} else {
+    fuelWhere.company_id = company_id;
+    if (affiliate_id) fuelWhere.affiliate_id = affiliate_id;
+}
+
+const fuelLogs = await FuelLog.findAll({
+    where: fuelWhere,
+    include: [
+        { model: Vehicle,   as: 'vehicle',   attributes: ['id', 'plate'], required: false },
+        { model: Affiliate, as: 'affiliate', attributes: ['id', 'name'],  required: false },
+    ],
+    attributes: ['id', 'fuel_date', 'vehicle_id', 'affiliate_id',
+                 'km_initial', 'km_final', 'km_driven',
+                 'gallons', 'price_per_gallon', 'total_value'],
+});
+
+// Solo registros del mes actual
+const monthFuelLogs = fuelLogs.filter(f => {
+    if (!f.fuel_date) return false;
+    const d = new Date(f.fuel_date.toString().substring(0, 10) + 'T12:00:00');
+    return d.getFullYear() === thisYear && d.getMonth() + 1 === thisMonth;
+});
+
+// KPIs generales de combustible del mes
+const fuelKpis = {
+    totalGallons:    monthFuelLogs.reduce((s, f) => s + Number(f.gallons     || 0), 0),
+    totalValue:      monthFuelLogs.reduce((s, f) => s + Number(f.total_value || 0), 0),
+    totalKmDriven:   monthFuelLogs.reduce((s, f) => s + Number(f.km_driven   || 0), 0),
+    get avgKmPerGallon() {
+        return this.totalGallons > 0
+            ? Math.round((this.totalKmDriven / this.totalGallons) * 10) / 10
+            : 0;
+    }
+};
+
+// Detalle por placa
+const fuelByPlate = {};
+monthFuelLogs.forEach(f => {
+    const plate = f.vehicle?.plate ?? 'Sin placa';
+    const affName = f.affiliate?.name ?? '';
+    if (!fuelByPlate[plate]) {
+        fuelByPlate[plate] = {
+            plate,
+            affilate: affName,
+            gallons:   0,
+            value:     0,
+            kmDriven:  0,
+        };
+    }
+    fuelByPlate[plate].gallons  += Number(f.gallons     || 0);
+    fuelByPlate[plate].value    += Number(f.total_value || 0);
+    fuelByPlate[plate].kmDriven += Number(f.km_driven   || 0);
+});
+
+// Agrega km/galón por placa
+const fuelByPlateResult = Object.values(fuelByPlate).map(p => ({
+    ...p,
+    gallons:      Math.round(p.gallons * 100) / 100,
+    kmPerGallon:  p.gallons > 0 ? Math.round((p.kmDriven / p.gallons) * 10) / 10 : 0,
+})).sort((a, b) => b.value - a.value); // ordena por mayor gasto
+
 res.json({
   affiliates: result,
   activeMonths,
@@ -221,7 +286,11 @@ res.json({
     thisMonthTotal,
     thisMonthTrips,
     monthlyBilling,
-  }
+  },
+  fuel: {
+    kpis:    fuelKpis,
+    byPlate: fuelByPlateResult,
+},
 });
 
     } catch (error) {
