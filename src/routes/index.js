@@ -24,6 +24,10 @@ const operationsRoutes = require('./operations.routes');
 const dashboardRoutes = require('./dashboard.routes');
 const affiliateBudgetRoutes = require('./affiliate-budget.routes');
 const fuelLogRoutes = require('./fuelLog.routes');
+const maintenancesRoutes = require('./maintenances.routes');
+const maintenanceTypesRoutes = require('./maintenanceTypes.routes');
+const trailerPlatesRoutes = require('./trailerPlates.routes');
+const vehicleDowntimesRoutes = require('./vehicleDowntimes.routes');
 
 const router = Router();
 router.use('/auth', authRoutes);
@@ -51,5 +55,9 @@ router.use('/operations', operationsRoutes);
 router.use('/dashboard', dashboardRoutes);
 router.use('/affiliate-budgets', affiliateBudgetRoutes);
 router.use('/fuel-logs', fuelLogRoutes);
+router.use('/maintenances', maintenancesRoutes);
+router.use('/maintenance-types', maintenanceTypesRoutes);
+router.use('/trailer-plates',    trailerPlatesRoutes);
+router.use('/vehicle-downtime', vehicleDowntimesRoutes);
 
 module.exports = router;
