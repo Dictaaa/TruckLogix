@@ -73,7 +73,7 @@ exports.getDashboard = async (req, res) => {
                 { model: Vehicle,   as: 'vehicle',   attributes: ['id', 'plate', 'soat_expiration', 'rtm_expiration'], required: false },
                 { model: Affiliate, as: 'affiliate', attributes: ['id', 'name'], required: false },
             ],
-            attributes: ['id', 'trip_date', 'freight_value', 'vehicle_id', 'affiliate_id'],
+            attributes: ['id', 'trip_date', 'freight_value', 'vehicle_id', 'affiliate_id', 'billing_status'],
         });
 
         const yearTrips = trips.filter(t => yearOf(t.trip_date) === year);
@@ -179,6 +179,54 @@ exports.getDashboard = async (req, res) => {
         const thisMonthTotal = monthlyBilling[thisMonth] || 0;
         const thisMonthTrips = yearTrips.filter(t => monthOf(t.trip_date) === thisMonth).length;
         const yesterdayTrips = yearTrips.filter(t => toYMD(t.trip_date) === yesterdayStr);
+
+        // ─── FACTURACIÓN (estado de los viajes del año) ───────────────────────
+        const BILL_STATUSES = ['pendiente_oc_temporal', 'pendiente_oc', 'pendiente_factura', 'facturado'];
+        const emptyBill = () => Object.fromEntries(BILL_STATUSES.map(s => [s, { trips: 0, value: 0 }]));
+        const withBillTotals = (byStatus) => {
+            const trips = BILL_STATUSES.reduce((a, s) => a + byStatus[s].trips, 0);
+            const value = BILL_STATUSES.reduce((a, s) => a + byStatus[s].value, 0);
+            const facturado = byStatus.facturado.value;
+            return {
+                byStatus, trips, value,
+                porFacturar: value - facturado,
+                pctFacturado: value > 0 ? round((facturado / value) * 100, 1) : null,
+            };
+        };
+
+        const billTotals = emptyBill();
+        const billMonthly = {};
+        for (let m = 1; m <= 12; m++) billMonthly[m] = emptyBill();
+        const billAffMap = {};
+
+        yearTrips.forEach(t => {
+            const st = BILL_STATUSES.includes(t.billing_status) ? t.billing_status : 'pendiente_oc_temporal';
+            const v  = Number(t.freight_value || 0);
+            const m  = monthOf(t.trip_date);
+
+            billTotals[st].trips++;
+            billTotals[st].value += v;
+            if (billMonthly[m]) {
+                billMonthly[m][st].trips++;
+                billMonthly[m][st].value += v;
+            }
+
+            const affId = t.affiliate_id ?? 0;
+            if (!billAffMap[affId]) {
+                billAffMap[affId] = { id: affId, name: t.affiliate?.name ?? 'Sin afiliado', byStatus: emptyBill() };
+            }
+            billAffMap[affId].byStatus[st].trips++;
+            billAffMap[affId].byStatus[st].value += v;
+        });
+
+        const billing = {
+            statuses: BILL_STATUSES,
+            totals: withBillTotals(billTotals),
+            monthly: Object.fromEntries(Object.entries(billMonthly).map(([m, b]) => [m, withBillTotals(b)])),
+            affiliates: Object.values(billAffMap)
+                .map(a => ({ id: a.id, name: a.name, ...withBillTotals(a.byStatus) }))
+                .sort((a, b) => b.porFacturar - a.porFacturar),
+        };
 
         // ─── COMBUSTIBLE (todo el año, mes a mes) ─────────────────────────────
         const fuelLogs = await FuelLog.findAll({
@@ -404,6 +452,7 @@ exports.getDashboard = async (req, res) => {
                 },
             },
             maintenance,
+            billing,
         });
 
     } catch (error) {

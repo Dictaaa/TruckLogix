@@ -1,7 +1,7 @@
 const { DataTypes, Model } = require('sequelize');
 const { sequelize } = require('../config/db');
 
-class Trip extends Model {}
+class Trip extends Model { }
 
 Trip.init({
   id: {
@@ -75,9 +75,9 @@ Trip.init({
   },
 
   client_id: {
-  type: DataTypes.INTEGER.UNSIGNED,
-  allowNull: true,
-},
+    type: DataTypes.INTEGER.UNSIGNED,
+    allowNull: true,
+  },
 
   client_status: {
     type: DataTypes.STRING(50),
@@ -113,6 +113,15 @@ Trip.init({
     type: DataTypes.DATEONLY,
     allowNull: true,
   },
+
+  billing_status: { type: DataTypes.STRING(30), allowNull: false, defaultValue: 'pendiente_oc_temporal' },
+  temp_order_id: { type: DataTypes.INTEGER, allowNull: true },
+  temp_order_at: { type: DataTypes.DATE, allowNull: true },
+  purchase_order: { type: DataTypes.STRING(60), allowNull: true },
+  purchase_order_at: { type: DataTypes.DATE, allowNull: true },
+  invoice_number: { type: DataTypes.STRING(60), allowNull: true },
+  invoice_date: { type: DataTypes.DATEONLY, allowNull: true },
+  invoice_at: { type: DataTypes.DATE, allowNull: true },
 
   active: {
     type: DataTypes.BOOLEAN,
@@ -188,7 +197,7 @@ Trip.associate = (models) => {
     as: 'origin'
   });
 
-  
+
   Trip.belongsTo(models.Patio, {
     foreignKey: 'destination_id',
     as: 'destination'
@@ -198,6 +207,9 @@ Trip.associate = (models) => {
     foreignKey: 'operation_id',
     as: 'operation'
   });
+
+  Trip.belongsTo(models.BillingTempOrder, { foreignKey: 'temp_order_id', as: 'tempOrder' });
+  Trip.hasMany(models.TripBillingEvent, { foreignKey: 'trip_id', as: 'billingEvents' });
 
 };
 

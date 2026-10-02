@@ -17,6 +17,7 @@ PygParameter.init(
         social_security:    money(),
         satellite:          money(),
         insurance:          money(),
+        affiliation:        money(),   // afiliación mensual
         parking:            money(),
         soat:               money(),
         tecnomecanica:      money(),

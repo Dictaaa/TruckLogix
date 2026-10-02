@@ -1,15 +1,15 @@
-const { Trip, Vehicle, Affiliate, FuelLog, Maintenance, MaintenanceType, PygParameter } = require('../models');
+const { Trip, Vehicle, Affiliate, FuelLog, Maintenance, MaintenanceType, PygParameter, Operation } = require('../models');
 const { Op } = require('sequelize');
 
 // ─── PARÁMETROS ───────────────────────────────────────────────────────────────
 const FIELDS = [
-    'salary', 'commission_pct', 'social_security', 'satellite', 'insurance', 'parking',
+    'salary', 'commission_pct', 'social_security', 'satellite', 'insurance', 'affiliation', 'parking',
     'soat', 'tecnomecanica', 'dotacion', 'dotacion_times', 'annual_maintenance',
 ];
 
 // Si no hay ningún parámetro cargado
 const DEFAULTS = {
-    salary: 0, commission_pct: 10, social_security: 0, satellite: 0, insurance: 0, parking: 0,
+    salary: 0, commission_pct: 10, social_security: 0, satellite: 0, insurance: 0, affiliation: 0, parking: 0,
     soat: 0, tecnomecanica: 0, dotacion: 0, dotacion_times: 3, annual_maintenance: 0,
 };
 
@@ -20,6 +20,7 @@ const COST_LINES = [
     { key: 'seguridad_social', label: 'Seguridad social' },
     { key: 'mantenimiento',    label: 'Mantenimiento y reparaciones' },
     { key: 'seguro',           label: 'Seguro todo riesgo' },
+    { key: 'afiliacion',       label: 'Afiliación' },
     { key: 'lavado',           label: 'Lavado y engrase' },
     { key: 'combustible',      label: 'Combustibles' },
     { key: 'llantas',          label: 'Llantas' },
@@ -35,6 +36,9 @@ const num = (v) => Number(v || 0);
 const pct = (part, whole) => (whole > 0 ? Math.round((part / whole) * 1000) / 10 : null);
 
 const normalize = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+
+/** Viajes regionales: al conductor se le paga directo, no llevan el % de comisión */
+const isRegionalTrip = (trip) => normalize(trip.operation?.name).includes('REGIONAL');
 
 const buildScope = (role, company_id, affiliate_id) => {
     const where = { active: true };
@@ -94,7 +98,10 @@ const buildPyg = async ({ role, company_id, affiliate_id, year, month }) => {
         Trip.findAll({
             where: { ...scope, trip_date: range },
             attributes: ['id', 'company_id', 'vehicle_id', 'affiliate_id', 'freight_value', 'transport_food_value'],
-            include: [vehicleInc, affiliateInc],
+            include: [
+                vehicleInc, affiliateInc,
+                { model: Operation, as: 'operation', attributes: ['id', 'name'], required: false },
+            ],
         }),
         FuelLog.findAll({
             where: { ...scope, fuel_date: range },
@@ -124,6 +131,9 @@ const buildPyg = async ({ role, company_id, affiliate_id, year, month }) => {
                 affiliateName: r.affiliate?.name ?? 'Sin afiliado',
                 trips: 0,
                 facturacion: 0,
+                facturacionComisionable: 0,   // facturación de viajes NO regionales
+                regionalTrips: 0,
+                regionalBilling: 0,
                 movilizacion: 0,
                 combustible: 0,
                 mantenimiento: 0,
@@ -136,8 +146,15 @@ const buildPyg = async ({ role, company_id, affiliate_id, year, month }) => {
 
     trips.forEach(t => {
         const r = rowFor(t);
+        const flete = num(t.freight_value);
         r.trips++;
-        r.facturacion  += num(t.freight_value);
+        r.facturacion += flete;
+        if (isRegionalTrip(t)) {
+            r.regionalTrips++;
+            r.regionalBilling += flete;
+        } else {
+            r.facturacionComisionable += flete;
+        }
         r.movilizacion += num(t.transport_food_value);
     });
 
@@ -163,7 +180,8 @@ const buildPyg = async ({ role, company_id, affiliate_id, year, month }) => {
             ? resolveParams(params, r.companyId, r.vehicleId)
             : { values: { ...DEFAULTS, commission_pct: 0, dotacion_times: 0 }, source: {} };
 
-        const commission = hasVehicle ? r.facturacion * (p.commission_pct / 100) : 0;
+        // La comisión solo aplica a viajes no regionales
+        const commission = hasVehicle ? r.facturacionComisionable * (p.commission_pct / 100) : 0;
 
         const lines = {
             laborales:        hasVehicle ? p.salary + commission : 0,
@@ -171,6 +189,7 @@ const buildPyg = async ({ role, company_id, affiliate_id, year, month }) => {
             seguridad_social: hasVehicle ? p.social_security : 0,
             mantenimiento:    r.mantenimiento,
             seguro:           hasVehicle ? p.insurance : 0,
+            afiliacion:       hasVehicle ? p.affiliation : 0,
             lavado:           r.lavado,
             combustible:      r.combustible,
             llantas:          r.llantas,
@@ -203,6 +222,8 @@ const buildPyg = async ({ role, company_id, affiliate_id, year, month }) => {
                 salary: p.salary,
                 commission: Math.round(commission),
                 commission_pct: p.commission_pct,
+                regionalTrips: r.regionalTrips,
+                regionalBilling: r.regionalBilling,
                 soat: p.soat,
                 tecnomecanica: p.tecnomecanica,
                 annual_maintenance: p.annual_maintenance,

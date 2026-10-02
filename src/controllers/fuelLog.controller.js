@@ -30,16 +30,20 @@ exports.createFuelLog = async (req, res) => {
     }
 };
 
-// ─── LISTAR (paginado + búsqueda) ─────────────────────────────────────────────
+// En src/controllers/fuelLog.controller.js reemplaza SOLO la función getFuelLogs por esta.
+
+// ─── LISTAR (paginado + búsqueda + filtros) ───────────────────────────────────
 exports.getFuelLogs = async (req, res) => {
     try {
         const { company_id, role } = req.user;
         const {
-            page   = 1,
-            limit  = 10,
-            search = '',
-            sortBy = 'fuel_date',
+            page    = 1,
+            limit   = 10,
+            search  = '',
+            sortBy  = 'fuel_date',
             sortDir = 'DESC',
+            vehicle_id, affiliate_id,
+            fecha_desde, fecha_hasta,
         } = req.query;
 
         const offset = (Number(page) - 1) * Number(limit);
@@ -64,13 +68,22 @@ exports.getFuelLogs = async (req, res) => {
             where.affiliate_id = company_id;
         } else {
             where.company_id = company_id;
+            if (affiliate_id) where.affiliate_id = affiliate_id;   // el afiliado no puede pisar su filtro
+        }
+
+        if (vehicle_id) where.vehicle_id = vehicle_id;
+
+        if (fecha_desde || fecha_hasta) {
+            where.fuel_date = {};
+            if (fecha_desde) where.fuel_date[Op.gte] = fecha_desde;
+            if (fecha_hasta) where.fuel_date[Op.lte] = fecha_hasta;
         }
 
         if (search) {
             where[Op.or] = [
-                { '$vehicle.plate$':    { [Op.like]: `%${search}%` } },
-                { '$affiliate.name$':   { [Op.like]: `%${search}%` } },
-                { observations:         { [Op.like]: `%${search}%` } },
+                { '$vehicle.plate$':  { [Op.iLike]: `%${search}%` } },
+                { '$affiliate.name$': { [Op.iLike]: `%${search}%` } },
+                { observations:       { [Op.iLike]: `%${search}%` } },
             ];
         }
 
