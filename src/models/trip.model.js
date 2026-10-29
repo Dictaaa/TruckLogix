@@ -122,6 +122,11 @@ Trip.init({
   invoice_number: { type: DataTypes.STRING(60), allowNull: true },
   invoice_date: { type: DataTypes.DATEONLY, allowNull: true },
   invoice_at: { type: DataTypes.DATE, allowNull: true },
+  missed_appointment: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
+  service_type: {
+  type: DataTypes.STRING(20),
+  allowNull: true,
+},
 
   active: {
     type: DataTypes.BOOLEAN,

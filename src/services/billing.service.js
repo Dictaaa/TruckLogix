@@ -35,7 +35,7 @@ const tripRef = (t, ctx = {}) => ({
     id: t.id,
     trip_date: t.trip_date,
     plate: ctx.plates?.[t.vehicle_id] ?? null,
-    container: ctx.containers?.[t.container_id] ?? null,
+    container: ctx.containers?.[t.container_number_id] ?? null,
     freight_value: Number(t.freight_value || 0),
     temp_order: t.temp_order_id ? (ctx.tempCodes?.[t.temp_order_id] ?? tempCode(t.temp_order_id)) : null,
     purchase_order: t.purchase_order || null,

@@ -30,6 +30,7 @@ const trailerPlatesRoutes = require('./trailerPlates.routes');
 const vehicleDowntimesRoutes = require('./vehicleDowntimes.routes');
 const pygRoutes = require('./pyg.routes');
 const billingRoutes = require('./billing.routes');
+const payrollRoutes = require('./payroll.routes');
 
 const router = Router();
 router.use('/auth', authRoutes);
@@ -63,5 +64,6 @@ router.use('/trailer-plates',    trailerPlatesRoutes);
 router.use('/vehicle-downtime', vehicleDowntimesRoutes);
 router.use('/pyg-parameters', pygRoutes);
 router.use('/billing', billingRoutes);
+router.use('/payroll', payrollRoutes);
 
 module.exports = router;

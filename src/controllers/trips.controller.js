@@ -152,7 +152,7 @@ exports.getTripsByCompany = async (req, res) => {
     if (destino) where.destination_id = destino;
     if (linea) where.shipping_line_id = linea;
     if (placa) where.vehicle_id = placa;
-    if (contenedor) where.container_id = contenedor;
+    if (contenedor) where.container_number_id = contenedor;
 
     if (fecha_desde || fecha_hasta) {
       where.trip_date = {};
@@ -181,7 +181,7 @@ exports.getTripsByCompany = async (req, res) => {
       fecha: 'trip_date',
       empresaTransporte: 'transport_company_id',
       placa: 'vehicle_id',
-      contenedor: 'container_id',
+      contenedor: 'container_number_id',
       cliente: 'client_id',
       linea: 'shipping_line_id',
       origen: 'origin_id',

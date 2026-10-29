@@ -1,5 +1,5 @@
 // src/controllers/billing.controller.js
-const { Trip, Vehicle, Affiliate, Client, Container, BillingTempOrder, TripBillingEvent } = require('../models');
+const { Trip, Vehicle, Affiliate, Client, Container, TransportCompany, BillingTempOrder, TripBillingEvent } = require('../models');
 const { sequelize } = require('../config/db');
 const { Op, fn, col } = require('sequelize');
 const B = require('../services/billing.service');
@@ -11,7 +11,7 @@ const VIEW_ROLES = [1, 2, 3];
 
 // Campos del viaje que usan las reglas
 const BILLING_ATTRS = [
-    'id', 'company_id', 'vehicle_id', 'container_id', 'affiliate_id', 'trip_date', 'freight_value',
+    'id', 'company_id', 'vehicle_id', 'container_number_id', 'affiliate_id', 'trip_date', 'freight_value',
     'billing_status', 'temp_order_id', 'purchase_order', 'invoice_number',
 ];
 
@@ -74,7 +74,7 @@ const loadLocked = async (ids, company_id, transaction) => {
 const buildCtx = async (trips, transaction) => {
     const vIds = [...new Set(trips.map(t => t.vehicle_id).filter(Boolean))];
     const tIds = [...new Set(trips.map(t => t.temp_order_id).filter(Boolean))];
-    const cIds = [...new Set(trips.map(t => t.container_id).filter(Boolean))];
+    const cIds = [...new Set(trips.map(t => t.container_number_id).filter(Boolean))];
     const [vehicles, temps, containers] = await Promise.all([
         vIds.length ? Vehicle.findAll({ where: { id: vIds }, attributes: ['id', 'plate'], raw: true, transaction }) : [],
         tIds.length ? BillingTempOrder.findAll({ where: { id: tIds }, attributes: ['id', 'code'], raw: true, transaction }) : [],
@@ -124,7 +124,7 @@ const logEvents = (trips, data, transaction) =>
 // GET /billing/trips
 //   ?status=pendiente_oc_temporal,pendiente_oc   (uno o varios separados por coma)
 //   &temp_order_id= &purchase_order= &invoice_number=
-//   &fecha_desde= &fecha_hasta= &affiliate_id= &client_id= &vehicle_id= &container_id=
+//   &fecha_desde= &fecha_hasta= &affiliate_id= &client_id= &vehicle_id= &container_number_id=
 //   &search= &page= &limit= &sortBy= &sortDir=
 //   &ids_only=1   → devuelve solo los ids que cumplen el filtro (para "seleccionar todos")
 exports.getTrips = async (req, res) => {
@@ -133,7 +133,7 @@ exports.getTrips = async (req, res) => {
         const {
             page = 1, limit = 20, search = '', column = '', sortBy = 'fecha', sortDir = 'desc',
             status, temp_order_id, purchase_order, invoice_number,
-            fecha_desde, fecha_hasta, affiliate_id, client_id, vehicle_id, container_id, ids_only,
+            fecha_desde, fecha_hasta, affiliate_id, client_id, vehicle_id, container_id, transport_company_id, ids_only,
         } = req.query;
 
         const where = tripScope(req);
@@ -148,7 +148,8 @@ exports.getTrips = async (req, res) => {
         if (affiliate_id && !isAffiliate(req)) where.affiliate_id = affiliate_id;
         if (client_id) where.client_id = client_id;
         if (vehicle_id) where.vehicle_id = vehicle_id;
-        if (container_id) where.container_id = container_id;
+        if (container_id) where.container_number_id = container_id;
+        if (transport_company_id) where.transport_company_id = transport_company_id;
 
         if (fecha_desde || fecha_hasta) {
             where.trip_date = {};
@@ -162,6 +163,7 @@ exports.getTrips = async (req, res) => {
             contenedor: '$container.number$',
             afiliado: '$affiliate.name$',
             cliente: '$client.name$',
+            transporte: '$transportCompany.name$',
             ocTemporal: '$tempOrder.code$',
             ordenCompra: 'purchase_order',
             factura: 'invoice_number',
@@ -181,6 +183,7 @@ exports.getTrips = async (req, res) => {
             { model: Affiliate, as: 'affiliate', attributes: ['id', 'name'], required: false },
             { model: Client, as: 'client', attributes: ['id', 'name'], required: false },
             { model: Container, as: 'container', attributes: ['id', 'number'], required: false },
+            { model: TransportCompany, as: 'transportCompany', attributes: ['id', 'name'], required: false },
             { model: BillingTempOrder, as: 'tempOrder', attributes: ['id', 'code'], required: false },
         ];
 

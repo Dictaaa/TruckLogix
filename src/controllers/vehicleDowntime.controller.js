@@ -1,8 +1,9 @@
-const { VehicleDowntime, VehicleDowntimeStatus, Vehicle, Affiliate, Maintenance, Trip } = require('../models');
+const { VehicleDowntime, VehicleDowntimeStatus, Vehicle, Affiliate, Driver, Maintenance, Trip } = require('../models');
 const { Op } = require('sequelize');
 
 const include = [
     { model: Vehicle,               as: 'vehicle',     attributes: ['id', 'plate'],  required: false },
+    { model: Driver,                as: 'driver',      attributes: ['id', 'name'],   required: false },
     { model: Affiliate,             as: 'affiliate',   attributes: ['id', 'name'],   required: false },
     { model: VehicleDowntimeStatus, as: 'status',      attributes: ['id', 'name'],   required: false },
     { model: Maintenance,           as: 'maintenance', attributes: ['id', 'entry_date', 'exit_date', 'operation_detail'], required: false },
@@ -62,6 +63,7 @@ exports.getDowntimes = async (req, res) => {
         if (vehicle_id)   where.vehicle_id   = vehicle_id;
         if (affiliate_id) where.affiliate_id = affiliate_id;
         if (status_id)    where.status_id    = status_id;
+        if (req.query.driver_id) where.driver_id = req.query.driver_id; 
 
         if (fecha_desde || fecha_hasta) {
             where.downtime_date = {};
@@ -114,8 +116,8 @@ exports.getSuggestions = async (req, res) => {
 
         const vehicles = await Vehicle.findAll({
             where: vehicleWhere,
-            include: [{ model: Affiliate, as: 'affiliate', attributes: ['id', 'name'], required: false }],
-            attributes: ['id', 'plate', 'company_id'],
+            include: [{ model: Affiliate, as: 'affiliate', attributes: ['id', 'name'], required: false }, { model: Driver,    as: 'driver',     attributes: ['id', 'name'], required: false }],
+            attributes: ['id', 'plate', 'company_id', 'driver_id'],
         });
 
         // 2. Todos los viajes en el rango
@@ -192,6 +194,7 @@ exports.getSuggestions = async (req, res) => {
                         plate:          v.plate,
                         affiliate_id:   v.company_id,
                         affiliate_name: v.affiliate?.name || '',
+                        driver_id:      v.driver_id || null,
                         downtime_date:  date,
                         maintenance_id: mtto?.id || null,
                         suggested_status: mtto ? 'taller' : null, // hint para el front
@@ -218,7 +221,7 @@ exports.createDowntime = async (req, res) => {
     try {
         const { id: user_id, company_id } = req.user;
         const { vehicle_id, status_id, observations, maintenance_id,
-                date_from, date_to, affiliate_id } = req.body;
+                date_from, date_to, affiliate_id, driver_id, lost_value } = req.body;
 
         if (!vehicle_id || !date_from || !status_id) {
             return res.status(400).json({ error: 'vehicle_id, date_from y status_id son obligatorios' });
@@ -233,10 +236,12 @@ exports.createDowntime = async (req, res) => {
                 const record = await VehicleDowntime.create({
                     company_id,
                     vehicle_id,
+                    driver_id:      driver_id || null,
                     affiliate_id:   affiliate_id || null,
                     status_id,
                     maintenance_id: maintenance_id || null,
                     downtime_date:  date,
+                    lost_value:     lost_value || 0,
                     observations:   observations || null,
                     user_id,
                 });
@@ -270,19 +275,21 @@ exports.createFromSuggestion = async (req, res) => {
     try {
         const { id: user_id, company_id } = req.user;
         const { vehicle_id, affiliate_id, downtime_date,
-                status_id, maintenance_id, observations } = req.body;
+                status_id, maintenance_id, observations, driver_id, lost_value } = req.body;
 
-        if (!vehicle_id || !downtime_date || !status_id) {
-            return res.status(400).json({ error: 'vehicle_id, downtime_date y status_id son obligatorios' });
+        if (!vehicle_id || !downtime_date || !status_id || !driver_id) {
+            return res.status(400).json({ error: 'vehicle_id, downtime_date, status_id, driver_id y lost_value son obligatorios' });
         }
 
         const record = await VehicleDowntime.create({
             company_id,
             vehicle_id,
+            driver_id:      driver_id || null,
             affiliate_id:   affiliate_id || null,
             status_id,
             maintenance_id: maintenance_id || null,
             downtime_date,
+            lost_value:     lost_value || 0,
             observations:   observations || null,
             user_id,
         });
@@ -308,6 +315,8 @@ exports.updateDowntime = async (req, res) => {
 
         await record.update({
             status_id:      req.body.status_id      ?? record.status_id,
+            driver_id:      req.body.driver_id      ?? record.driver_id,
+            lost_value:     req.body.lost_value     ?? record.lost_value,
             observations:   req.body.observations   ?? record.observations,
             maintenance_id: req.body.maintenance_id ?? record.maintenance_id,
         });
@@ -358,6 +367,7 @@ exports.createStatus = async (req, res) => {
         }
         const status = await VehicleDowntimeStatus.create({
             name: req.body.name.trim(),
+            is_driver_fault: !!req.body.is_driver_fault,
             company_id,
         });
         res.status(201).json(status);
@@ -372,7 +382,12 @@ exports.updateStatus = async (req, res) => {
         const { id } = req.params;
         const status = await VehicleDowntimeStatus.findOne({ where: { id, company_id, active: true } });
         if (!status) return res.status(404).json({ error: 'Estado no encontrado' });
-        await status.update({ name: req.body.name?.trim() || status.name });
+        await status.update({
+            name: req.body.name?.trim() || status.name,
+            is_driver_fault: req.body.is_driver_fault !== undefined
+                ? !!req.body.is_driver_fault
+                : status.is_driver_fault
+        });
         res.json(status);
     } catch (error) {
         res.status(500).json({ error: 'Error del servidor' });

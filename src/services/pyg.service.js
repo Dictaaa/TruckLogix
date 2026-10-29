@@ -1,19 +1,20 @@
-const { Trip, Vehicle, Affiliate, FuelLog, Maintenance, MaintenanceType, PygParameter, Operation } = require('../models');
+const { Trip, Vehicle, Affiliate, FuelLog, Maintenance, MaintenanceType, PygParameter, Operation, Driver, PayrollSettings } = require('../models');
 const { Op } = require('sequelize');
 
 // ─── PARÁMETROS ───────────────────────────────────────────────────────────────
+// 'salary' y 'commission_pct' quedaron fuera de uso en "laborales" — ese costo
+// ahora sale de nómina real (ver más abajo). Se dejan en el catálogo por si
+// quieres conservarlos para otro fin, pero buildPyg ya no los lee para esta línea.
 const FIELDS = [
     'salary', 'commission_pct', 'social_security', 'satellite', 'insurance', 'affiliation', 'parking',
     'soat', 'tecnomecanica', 'dotacion', 'dotacion_times', 'annual_maintenance',
 ];
 
-// Si no hay ningún parámetro cargado
 const DEFAULTS = {
     salary: 0, commission_pct: 10, social_security: 0, satellite: 0, insurance: 0, affiliation: 0, parking: 0,
     soat: 0, tecnomecanica: 0, dotacion: 0, dotacion_times: 3, annual_maintenance: 0,
 };
 
-// Líneas de costo en el orden del PYG
 const COST_LINES = [
     { key: 'laborales',        label: 'Laborales operativos' },
     { key: 'satelital',        label: 'Satelital' },
@@ -37,7 +38,6 @@ const pct = (part, whole) => (whole > 0 ? Math.round((part / whole) * 1000) / 10
 
 const normalize = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
 
-/** Viajes regionales: al conductor se le paga directo, no llevan el % de comisión */
 const isRegionalTrip = (trip) => normalize(trip.operation?.name).includes('REGIONAL');
 
 const buildScope = (role, company_id, affiliate_id) => {
@@ -51,13 +51,7 @@ const buildScope = (role, company_id, affiliate_id) => {
     return where;
 };
 
-/**
- * Resuelve los parámetros vigentes campo por campo.
- * `params` debe venir ordenado por valid_from DESC, id DESC y ya filtrado a valid_from <= fecha.
- * Prioridad: valor propio de la placa → valor general → default.
- */
 const resolveParams = (params, companyId, vehicleId) => {
-    // Normaliza tipos: el token puede traer ids como texto y PostgreSQL los devuelve como número
     const cid = Number(companyId);
     const vid = vehicleId ? Number(vehicleId) : null;
     const values = {};
@@ -86,6 +80,19 @@ const loadParams = (companyIds, untilDate) =>
         raw: true,
     });
 
+/** company_id -> salario mínimo vigente (misma fuente que usa nómina). */
+async function loadMinWages(companyIds) {
+    const byCompany = {};
+    for (const cid of companyIds) {
+        const [settings] = await PayrollSettings.findOrCreate({
+            where: { company_id: cid },
+            defaults: { company_id: cid },
+        });
+        byCompany[cid] = Number(settings.min_wage) || 0;
+    }
+    return byCompany;
+}
+
 // ─── PYG DEL MES ──────────────────────────────────────────────────────────────
 const buildPyg = async ({ role, company_id, affiliate_id, year, month }) => {
     const range = { [Op.gte]: monthStart(year, month), [Op.lt]: nextMonthStart(year, month) };
@@ -97,7 +104,8 @@ const buildPyg = async ({ role, company_id, affiliate_id, year, month }) => {
     const [trips, fuels, mttos] = await Promise.all([
         Trip.findAll({
             where: { ...scope, trip_date: range },
-            attributes: ['id', 'company_id', 'vehicle_id', 'affiliate_id', 'freight_value', 'transport_food_value'],
+            attributes: ['id', 'company_id', 'vehicle_id', 'driver_id', 'affiliate_id',
+                         'freight_value', 'commission_paid', 'transport_food_value', 'trip_date'],
             include: [
                 vehicleInc, affiliateInc,
                 { model: Operation, as: 'operation', attributes: ['id', 'name'], required: false },
@@ -118,7 +126,6 @@ const buildPyg = async ({ role, company_id, affiliate_id, year, month }) => {
         }),
     ]);
 
-    // Una fila por placa con actividad en el mes
     const rows = {};
     const rowFor = (r) => {
         const vid = r.vehicle_id ?? 0;
@@ -131,7 +138,6 @@ const buildPyg = async ({ role, company_id, affiliate_id, year, month }) => {
                 affiliateName: r.affiliate?.name ?? 'Sin afiliado',
                 trips: 0,
                 facturacion: 0,
-                facturacionComisionable: 0,   // facturación de viajes NO regionales
                 regionalTrips: 0,
                 regionalBilling: 0,
                 movilizacion: 0,
@@ -139,6 +145,8 @@ const buildPyg = async ({ role, company_id, affiliate_id, year, month }) => {
                 mantenimiento: 0,
                 llantas: 0,
                 lavado: 0,
+                commissionPaid: 0,
+                driverDays: {},
             };
         }
         return rows[vid];
@@ -152,10 +160,14 @@ const buildPyg = async ({ role, company_id, affiliate_id, year, month }) => {
         if (isRegionalTrip(t)) {
             r.regionalTrips++;
             r.regionalBilling += flete;
-        } else {
-            r.facturacionComisionable += flete;
         }
         r.movilizacion += num(t.transport_food_value);
+        r.commissionPaid += num(t.commission_paid);
+
+        if (t.driver_id) {
+            if (!r.driverDays[t.driver_id]) r.driverDays[t.driver_id] = new Set();
+            r.driverDays[t.driver_id].add(String(t.trip_date));
+        }
     });
 
     fuels.forEach(f => { rowFor(f).combustible += num(f.total_value); });
@@ -172,19 +184,36 @@ const buildPyg = async ({ role, company_id, affiliate_id, year, month }) => {
     const rowList = Object.values(rows);
     const companyIds = [...new Set(rowList.map(r => r.companyId).filter(Boolean))];
     const params = companyIds.length ? await loadParams(companyIds, monthLastDay(year, month)) : [];
+    const minWages = companyIds.length ? await loadMinWages(companyIds) : {};
 
-    // Calcula cada placa
+    const allDriverIds = [...new Set(rowList.flatMap(r => Object.keys(r.driverDays).map(Number)))];
+    const driverNames = {};
+    if (allDriverIds.length) {
+        const driverRows = await Driver.findAll({ where: { id: allDriverIds }, attributes: ['id', 'name'], raw: true });
+        driverRows.forEach(d => { driverNames[d.id] = d.name; });
+    }
+
     const vehicles = rowList.map(r => {
-        const hasVehicle = r.vehicleId !== 0; // "Sin placa" no lleva costos fijos
+        const hasVehicle = r.vehicleId !== 0;
         const { values: p, source } = hasVehicle
             ? resolveParams(params, r.companyId, r.vehicleId)
             : { values: { ...DEFAULTS, commission_pct: 0, dotacion_times: 0 }, source: {} };
 
-        // La comisión solo aplica a viajes no regionales
-        const commission = hasVehicle ? r.facturacionComisionable * (p.commission_pct / 100) : 0;
+        const minWage = minWages[r.companyId] || 0;
+        const dailyRate = minWage / 30;
+
+        const driversDetail = Object.entries(r.driverDays).map(([driverId, dates]) => ({
+            driverId: Number(driverId),
+            driverName: driverNames[driverId] || `Conductor #${driverId}`,
+            days: dates.size,
+            salary: Math.round(dates.size * dailyRate),
+        }));
+        const driverSalaryTotal = driversDetail.reduce((s, d) => s + d.salary, 0);
+
+        const commission = hasVehicle ? r.commissionPaid : 0;
 
         const lines = {
-            laborales:        hasVehicle ? p.salary + commission : 0,
+            laborales:        hasVehicle ? driverSalaryTotal + commission : 0,
             satelital:        hasVehicle ? p.satellite : 0,
             seguridad_social: hasVehicle ? p.social_security : 0,
             mantenimiento:    r.mantenimiento,
@@ -219,9 +248,9 @@ const buildPyg = async ({ role, company_id, affiliate_id, year, month }) => {
             utilidadNeta: Math.round(utilidadNeta),
             margenNeto: pct(utilidadNeta, r.facturacion),
             detail: {
-                salary: p.salary,
+                driversDetail,
+                salary: driverSalaryTotal,
                 commission: Math.round(commission),
-                commission_pct: p.commission_pct,
                 regionalTrips: r.regionalTrips,
                 regionalBilling: r.regionalBilling,
                 soat: p.soat,
@@ -234,7 +263,6 @@ const buildPyg = async ({ role, company_id, affiliate_id, year, month }) => {
         };
     }).sort((a, b) => a.affiliateName.localeCompare(b.affiliateName) || a.plate.localeCompare(b.plate));
 
-    // Totales
     const sumBlock = (list) => {
         const lines = {};
         COST_LINES.forEach(l => { lines[l.key] = list.reduce((s, v) => s + v.lines[l.key], 0); });
